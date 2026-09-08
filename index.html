@@ -125,6 +125,8 @@ textarea.form-control{min-height:80px;resize:vertical}
         <tr>
           <th style="width:39%">Produk</th>
           <th>No. Pesanan</th>
+          <th>Tgl Pesan</th>
+          <th>Deadline</th>
           <th>Pembeli</th>
           <th>Tanggal</th>
           <th>Status / Tahap</th>
@@ -183,6 +185,14 @@ textarea.form-control{min-height:80px;resize:vertical}
       <input id="orderDate" class="form-control" type="date" required>
     </div>
     <div class="form-group">
+      <label>Tanggal Deadline</label>
+      <input id="deadline" class="form-control" type="date" required>
+    </div>
+    <div class="form-group">
+      <label>Tanggal Pemesanan</label>
+      <input id="orderDate" class="form-control" type="date" required>
+    </div>
+    <div class="form-group">
       <label>Tanggal Deadline Pengiriman</label>
       <input id="deadline" class="form-control" type="date" required>
       <span class="note">Akan muncul notice merah jika deadline sudah lewat dan pesanan belum selesai.</span>
@@ -235,19 +245,24 @@ textarea.form-control{min-height:80px;resize:vertical}
  </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SUPABASE_URL="https://voxdsbzoxvsvbwgfjzrc.supabase.co/rest/v1/";
+const SUPABASE_KEY="sb_publishable_jI5x0yuVUj1VpmXWFwnhRA_EA61TUCO";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const KEY='pesanan_jersey_v1';
 const PRODUCT_KEY='produk_jersey_v1';
-let orders=JSON.parse(localStorage.getItem(KEY)||'[]');
-let products=JSON.parse(localStorage.getItem(PRODUCT_KEY)||'[]');
+let orders=[];
+let products=[];
 let activeTab='Semua';
 let activeStage='Semua';
 let pendingPhoto='';
 let pendingProductPhoto='';
 
 const $=id=>document.getElementById(id);
-function save(){localStorage.setItem(KEY,JSON.stringify(orders));render();}
-function saveProducts(){localStorage.setItem(PRODUCT_KEY,JSON.stringify(products));renderProducts();populateProductSelect();}
+async function loadData(){const [pr,or]=await Promise.all([db.from('products').select('*').order('created_at',{ascending:false}),db.from('orders').select('*, products(name)').order('deadline',{ascending:true})]);if(pr.error)throw pr.error;if(or.error)throw or.error;products=pr.data||[];orders=(or.data||[]).map(x=>({...x,product:x.products?.name||'',productId:x.product_id,orderNo:x.order_no,orderDate:x.order_date,deadline:x.deadline,designLink:x.design_link,receiptLink:x.receipt_link}));renderProducts();populateProductSelect();render();}
+async function save(){await loadData()}
+async function saveProducts(){await loadData()}
 
 function openModal(id=null){
   if(!products.length){
@@ -260,10 +275,11 @@ function openModal(id=null){
   $('modalTitle').textContent=id?'Edit Pesanan':'Tambah Pesanan';
   $('orderForm').reset(); $('editId').value=id||''; pendingPhoto=''; $('orderDate').value=todayISO(); $('deadline').value=todayISO();
   $('preview').style.display='none';
+  const now=new Date(); const today=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10); const dd=new Date(now.getTime()+7*86400000); const defaultDeadline=new Date(dd.getTime()-dd.getTimezoneOffset()*60000).toISOString().slice(0,10); $('orderDate').value=today; $('deadline').value=defaultDeadline;
   populateProductSelect();
   if(id){
     const o=orders.find(x=>x.id===id); if(!o)return;
-    $('orderNo').value=o.orderNo; $('buyer').value=o.buyer; $('orderDate').value=o.orderDate||todayISO(); $('deadline').value=o.deadline||todayISO();
+    $('orderNo').value=o.orderNo; $('buyer').value=o.buyer; $('orderDate').value=o.orderDate||today; $('deadline').value=o.deadline||defaultDeadline; $('orderDate').value=o.orderDate||todayISO(); $('deadline').value=o.deadline||todayISO();
     $('productId').value=o.productId || products.find(p=>p.name===o.product)?.id || '';
     $('variation').value=o.variation||''; $('stage').value=o.stage;
     $('designLink').value=o.designLink||''; $('receiptLink').value=o.receiptLink||'';
@@ -304,9 +320,10 @@ $('productForm').addEventListener('submit',e=>{
     alert('Nama produk sudah ada. Gunakan nama yang berbeda.');
     return;
   }
-  const data={id:id||Date.now().toString(),name,photo:pendingProductPhoto||old?.photo||''};
-  if(id) products=products.map(x=>x.id===id?data:x); else products.unshift(data);
-  saveProducts(); closeProductModal();
+  const data={name,photo:pendingProductPhoto||old?.photo||''};
+  const result=id?await db.from('products').update(data).eq('id',id):await db.from('products').insert(data);
+  if(result.error){alert('Gagal menyimpan produk: '+result.error.message);return;}
+  await saveProducts(); closeProductModal();
 });
 
 function delProduct(id){
@@ -315,8 +332,7 @@ function delProduct(id){
     ? 'Produk ini sudah dipakai pada order. Hapus produk? Foto pada order lama tetap tersimpan.'
     : 'Hapus produk ini?';
   if(confirm(msg)){
-    products=products.filter(x=>x.id!==id);
-    saveProducts();
+    const result=await db.from('products').delete().eq('id',id); if(result.error){alert(result.error.message);return;} await saveProducts();
   }
 }
 function editProduct(id){openProductModal(id)}
@@ -351,32 +367,26 @@ $('orderForm').addEventListener('submit',e=>{
   const productId=$('productId').value;
   const p=products.find(x=>x.id===productId);
   if(!p){alert('Pilih produk terlebih dahulu.');return;}
-  const data={
-    id:id||Date.now().toString(),
-    orderNo:$('orderNo').value.trim(),buyer:$('buyer').value.trim(),orderDate:$('orderDate').value,deadline:$('deadline').value,
-    productId:productId, product:p.name, variation:$('variation').value.trim(),
-    stage:$('stage').value,designLink:$('designLink').value.trim(),
-    receiptLink:$('receiptLink').value.trim(),notes:$('notes').value.trim(),
-    photo:pendingPhoto || old?.photo || p.photo || ''
-  };
-  if(id) orders=orders.map(x=>x.id===id?data:x); else orders.unshift(data);
-  save();closeModal();
+  const data={order_no:$('orderNo').value.trim(),buyer:$('buyer').value.trim(),product_id:productId,variation:$('variation').value.trim(),stage:$('stage').value,order_date:$('orderDate').value,deadline:$('deadline').value,design_link:$('designLink').value.trim(),receipt_link:$('receiptLink').value.trim(),notes:$('notes').value.trim(),photo:pendingPhoto || old?.photo || p.photo || ''};
+  const result=id?await db.from('orders').update(data).eq('id',id):await db.from('orders').insert(data);
+  if(result.error){alert('Gagal menyimpan pesanan: '+result.error.message);return;}
+  await save();closeModal();
 });
 
 function del(id){
- if(confirm('Hapus pesanan ini?')){orders=orders.filter(x=>x.id!==id);save();}
+ if(confirm('Hapus pesanan ini?')){const result=await db.from('orders').delete().eq('id',id); if(result.error){alert(result.error.message);return;} await save();}
 }
 function edit(id){openModal(id)}
 function advance(id){
  const seq=['Maintenance Desain','Print Press','Jahit','Kirim Ekspedisi','Selesai'];
  const o=orders.find(x=>x.id===id), i=seq.indexOf(o.stage);
- if(i<seq.length-1){o.stage=seq[i+1];save()}
+ if(i<seq.length-1){const result=await db.from('orders').update({stage:seq[i+1]}).eq('id',id);if(result.error){alert(result.error.message);return;}await save()}
 }
 function render(){
  const q=$('search').value.toLowerCase();
  const filter=$('filterStage').value;
  let list=orders.filter(o=>{
-  const matchQ=!q||[o.orderNo,o.buyer,o.product,o.variation].join(' ').toLowerCase().includes(q);
+  const matchQ=!q||[o.orderNo,o.buyer,o.product,o.variation,o.orderDate,o.deadline].join(' ').toLowerCase().includes(q);
   const matchTab=activeTab==='Semua'||(activeTab==='Belum Diproses'&&o.stage==='Maintenance Desain')||(activeTab==='Diproses'&&['Print Press','Jahit','Kirim Ekspedisi'].includes(o.stage))||(activeTab==='Selesai'&&o.stage==='Selesai');
   const matchStage=filter==='Semua'||o.stage===filter;
   return matchQ&&matchTab&&matchStage&&(activeStage==='Semua'||o.stage===activeStage);
@@ -397,6 +407,8 @@ function render(){
    <div><div class="product-title">${esc(o.product)}</div><div class="muted">${esc(o.variation||'Tanpa variasi')}</div>${o.notes?`<div class="muted">${esc(o.notes)}</div>`:''}</div>
   </div></td>
   <td>${esc(o.orderNo)}</td>
+  <td>${formatDate(o.orderDate)}</td>
+  <td>${deadlineNotice(o)}</td>
   <td>${esc(o.buyer)}</td>
   <td>
     <div>${formatDate(o.orderDate)}</div>
@@ -450,6 +462,8 @@ function deadlineNotice(o){
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function escAttr(s){return esc(s)}
 function safeUrl(s){try{let u=new URL(s);return ['http:','https:'].includes(u.protocol)?esc(u.href):'#'}catch{return '#'}}
+function formatDate(v){if(!v)return '-';return new Date(v+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'})}
+function deadlineNotice(o){if(!o.deadline)return '<span class="muted">-</span>';if(o.stage==='Selesai')return formatDate(o.deadline);const t=new Date();t.setHours(0,0,0,0);const d=new Date(o.deadline+'T00:00:00');d.setHours(0,0,0,0);const n=Math.ceil((d-t)/86400000);if(n<0)return '<span class="badge" style="background:#ffe8e8;color:#d32f2f;font-weight:bold">TERLAMBAT '+Math.abs(n)+' HARI</span>';if(n===0)return '<span class="badge" style="background:#fff0d6;color:#c77700;font-weight:bold">DEADLINE HARI INI</span>';if(n===1)return '<span class="badge" style="background:#fff7d6;color:#a06a00;font-weight:bold">BESOK</span>';return formatDate(o.deadline)}
 function resetFilter(){
  $('search').value='';$('filterStage').value='Semua';activeStage='Semua';
  document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
@@ -466,9 +480,7 @@ function exportData(){
  const blob=new Blob([JSON.stringify({products,orders},null,2)],{type:'application/json'});
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pesanan-jersey-data.json';a.click();URL.revokeObjectURL(a.href);
 }
-populateProductSelect();
-renderProducts();
-render();
+loadData().catch(e=>{console.error(e);alert('Gagal terhubung ke Supabase. Isi URL dan Publishable Key terlebih dahulu.')});
 </script>
 </body>
 </html>
