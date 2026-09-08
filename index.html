@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pesanan Tawamil</title>
+<title>Pesanan Saya</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#fff;color:#222}
@@ -273,13 +273,18 @@ function openModal(id=null){
   }
   $('modalBg').style.display='flex';
   $('modalTitle').textContent=id?'Edit Pesanan':'Tambah Pesanan';
-  $('orderForm').reset(); $('editId').value=id||''; pendingPhoto=''; $('orderDate').value=todayISO(); $('deadline').value=todayISO();
+  $('orderForm').reset(); $('editId').value=id||''; pendingPhoto='';
   $('preview').style.display='none';
-  const now=new Date(); const today=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10); const dd=new Date(now.getTime()+7*86400000); const defaultDeadline=new Date(dd.getTime()-dd.getTimezoneOffset()*60000).toISOString().slice(0,10); $('orderDate').value=today; $('deadline').value=defaultDeadline;
+  const now=new Date();
+  const today=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  const dd=new Date(now.getTime()+7*86400000);
+  const defaultDeadline=new Date(dd.getTime()-dd.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  $('orderDate').value=today;
+  $('deadline').value=defaultDeadline;
   populateProductSelect();
   if(id){
     const o=orders.find(x=>x.id===id); if(!o)return;
-    $('orderNo').value=o.orderNo; $('buyer').value=o.buyer; $('orderDate').value=o.orderDate||today; $('deadline').value=o.deadline||defaultDeadline; $('orderDate').value=o.orderDate||todayISO(); $('deadline').value=o.deadline||todayISO();
+    $('orderNo').value=o.orderNo; $('buyer').value=o.buyer; $('orderDate').value=o.orderDate||today; $('deadline').value=o.deadline||defaultDeadline;
     $('productId').value=o.productId || products.find(p=>p.name===o.product)?.id || '';
     $('variation').value=o.variation||''; $('stage').value=o.stage;
     $('designLink').value=o.designLink||''; $('receiptLink').value=o.receiptLink||'';
@@ -311,7 +316,7 @@ $('productPhoto').addEventListener('change',e=>{
   reader.readAsDataURL(file);
 });
 
-$('productForm').addEventListener('submit',e=>{
+$('productForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const id=$('editProductId').value;
   const old=id?products.find(x=>x.id===id):null;
@@ -326,7 +331,7 @@ $('productForm').addEventListener('submit',e=>{
   await saveProducts(); closeProductModal();
 });
 
-function delProduct(id){
+async function delProduct(id){
   const used=orders.some(o=>o.productId===id);
   const msg=used
     ? 'Produk ini sudah dipakai pada order. Hapus produk? Foto pada order lama tetap tersimpan.'
@@ -360,7 +365,7 @@ $('photo').addEventListener('change',e=>{
   reader.readAsDataURL(file);
 });
 
-$('orderForm').addEventListener('submit',e=>{
+$('orderForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const id=$('editId').value;
   const old=id?orders.find(x=>x.id===id):null;
@@ -373,11 +378,11 @@ $('orderForm').addEventListener('submit',e=>{
   await save();closeModal();
 });
 
-function del(id){
+async function del(id){
  if(confirm('Hapus pesanan ini?')){const result=await db.from('orders').delete().eq('id',id); if(result.error){alert(result.error.message);return;} await save();}
 }
 function edit(id){openModal(id)}
-function advance(id){
+async function advance(id){
  const seq=['Maintenance Desain','Print Press','Jahit','Kirim Ekspedisi','Selesai'];
  const o=orders.find(x=>x.id===id), i=seq.indexOf(o.stage);
  if(i<seq.length-1){const result=await db.from('orders').update({stage:seq[i+1]}).eq('id',id);if(result.error){alert(result.error.message);return;}await save()}
