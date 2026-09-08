@@ -3,321 +3,291 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jersey PO Tracker</title>
+<title>Pesanan Saya</title>
 <style>
-:root{
-  --bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--line:#e6e9ef;
-  --primary:#111827;--blue:#2563eb;--purple:#7c3aed;--orange:#ea580c;
-  --green:#16a34a;--red:#dc2626;--yellow:#d97706;--shadow:0 8px 28px rgba(15,23,42,.07);
-}
 *{box-sizing:border-box}
-body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
-button,input,textarea,select{font:inherit}
-button{cursor:pointer}
-.app{display:flex;min-height:100vh}
-.sidebar{width:230px;background:#111827;color:#fff;padding:22px 16px;position:sticky;top:0;height:100vh}
-.logo{font-weight:800;font-size:20px;padding:8px 10px 25px}
-.logo span{color:#93c5fd}
-.nav button{width:100%;border:0;background:transparent;color:#cbd5e1;text-align:left;padding:12px;border-radius:10px;margin:3px 0}
-.nav button.active,.nav button:hover{background:#1f2937;color:#fff}
-.main{flex:1;min-width:0}
-.topbar{background:#fff;border-bottom:1px solid var(--line);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;gap:15px;position:sticky;top:0;z-index:5}
-.topbar h1{margin:0;font-size:22px}
-.topbar small{color:var(--muted)}
-.content{padding:24px 28px;max-width:1500px;margin:auto}
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
-.search{flex:1;min-width:220px}
-input,textarea,select{width:100%;border:1px solid #dfe3ea;border-radius:10px;padding:11px 12px;background:#fff;color:var(--text);outline:none}
-input:focus,textarea:focus,select:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
-.btn{border:0;border-radius:10px;padding:11px 15px;font-weight:700}
-.btn-primary{background:var(--primary);color:#fff}.btn-light{background:#fff;border:1px solid var(--line);color:var(--text)}
-.btn-danger{background:#fee2e2;color:#b91c1c}.btn-small{padding:8px 10px;font-size:13px}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
-.stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px;box-shadow:var(--shadow)}
-.stat b{font-size:24px}.stat span{display:block;color:var(--muted);font-size:13px;margin-top:3px}
-.filters{display:flex;gap:8px;overflow:auto;padding-bottom:3px;margin-bottom:18px}
-.filter{white-space:nowrap;border:1px solid var(--line);background:#fff;padding:9px 12px;border-radius:999px;font-size:13px}
-.filter.active{background:#111827;color:#fff;border-color:#111827}
-.orders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-.order{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);position:relative}
-.priority-strip{height:5px;background:#d1d5db}.priority-strip.segera{background:#f59e0b}.priority-strip.prioritas{background:#ef4444}.priority-strip.terlambat{background:#991b1b}
-.design{height:190px;background:#eef1f5;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.design img{width:100%;height:100%;object-fit:cover}
-.placeholder{color:#9ca3af;font-size:14px;text-align:center;padding:20px}
-.cardbody{padding:15px}
-.row-between{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-.orderid{font-weight:800;font-size:15px;word-break:break-all}
-.buyer{font-size:18px;font-weight:750;margin-top:4px}
-.deadline{margin:13px 0;padding:10px 11px;border-radius:10px;background:#f8fafc;display:flex;justify-content:space-between;gap:10px}
-.deadline strong{font-size:13px}.deadline small{color:var(--muted)}
-.badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:800;white-space:nowrap}
-.badge.baru{background:#f1f5f9;color:#475569}.badge.maintenance{background:#dbeafe;color:#1d4ed8}.badge.print{background:#ede9fe;color:#6d28d9}.badge.jahit{background:#ffedd5;color:#c2410c}.badge.kirim{background:#dcfce7;color:#15803d}.badge.selesai{background:#dcfce7;color:#15803d}
-.priority{font-size:11px;font-weight:900;padding:5px 8px;border-radius:7px;background:#fee2e2;color:#b91c1c;margin-bottom:9px;display:inline-block}
-.custom{border:1px solid var(--line);border-radius:10px;padding:11px;margin:11px 0}
-.custom-grid{display:grid;grid-template-columns:1fr 75px;gap:12px}
-.label{font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em}
-.value{font-weight:800;margin-top:2px}
-.note{color:#4b5563;font-size:13px;line-height:1.45;white-space:pre-wrap}
-.drive{display:block;margin-top:10px;color:#2563eb;text-decoration:none;font-weight:700;font-size:13px}
-.actions{display:flex;gap:8px;margin-top:13px}.actions .btn{flex:1}
-.empty{grid-column:1/-1;text-align:center;padding:60px 20px;background:#fff;border:1px dashed #d5dae3;border-radius:16px;color:var(--muted)}
-.modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;padding:18px;z-index:20}
-.modal.show{display:flex}
-.modalbox{background:#fff;width:min(760px,100%);max-height:92vh;overflow:auto;border-radius:18px;padding:20px}
-.modalhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
-.modalhead h2{margin:0;font-size:20px}.close{border:0;background:#f1f5f9;border-radius:9px;padding:7px 10px}
-.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.field.full{grid-column:1/-1}.field label{display:block;font-size:12px;font-weight:750;margin-bottom:6px}
-.form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
-.preview{width:100%;max-height:240px;object-fit:contain;background:#f1f5f9;border-radius:12px;margin-top:8px;display:none}
-.detail-layout{display:grid;grid-template-columns:280px 1fr;gap:18px}.detail-img{width:100%;height:280px;object-fit:cover;background:#f1f5f9;border-radius:12px}
-.detail-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}.detail-item{border:1px solid var(--line);border-radius:10px;padding:10px}.detail-item.full{grid-column:1/-1}
-.history{margin-top:18px}.history-item{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}.dot{width:9px;height:9px;background:#111827;border-radius:50%;margin-top:6px;flex:none}.history small{color:var(--muted)}
-@media(max-width:1100px){.orders{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:800px){.sidebar{display:none}.topbar{padding:15px 17px}.content{padding:17px}.stats{grid-template-columns:repeat(2,1fr)}.orders{grid-template-columns:1fr}.detail-layout{grid-template-columns:1fr}.detail-img{height:240px}}
-@media(max-width:520px){.stats{grid-template-columns:1fr 1fr}.formgrid,.detail-list{grid-template-columns:1fr}.field.full,.detail-item.full{grid-column:auto}.topbar h1{font-size:18px}.content{padding:13px}.design{height:180px}}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#fff;color:#222}
+button,input,select,textarea{font:inherit}
+.app{max-width:1600px;margin:auto;padding:28px 24px}
+h1{font-size:24px;margin:0 0 28px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.btn{border:1px solid #ddd;background:#fff;border-radius:6px;padding:10px 18px;cursor:pointer}
+.btn:hover{background:#f7f7f7}
+.btn.primary{background:#ff4d3d;border-color:#ff4d3d;color:#fff}
+.btn.danger{color:#e53935;border-color:#ffc9c5}
+.tabs{display:flex;gap:34px;border-bottom:1px solid #ddd;margin-top:20px}
+.tab{padding:14px 5px 18px;cursor:pointer}
+.tab.active{color:#f4513d;font-weight:bold;border-bottom:3px solid #f4513d}
+.filters{padding:24px 0 10px}
+.filter-row{display:flex;gap:18px;margin-bottom:18px}
+.field{height:40px;border:1px solid #ddd;border-radius:6px;padding:0 14px;background:#fff}
+.search{flex:1}
+.select{min-width:300px}
+.statuses{display:flex;gap:10px;align-items:center;margin-bottom:18px}
+.pill{padding:9px 18px;border:1px solid #ddd;border-radius:22px;background:#fff;cursor:pointer}
+.pill.active{border-color:#ff4d3d;color:#ff4d3d}
+.summary{display:flex;justify-content:space-between;align-items:center;margin:24px 0 14px}
+.summary strong{font-size:20px}
+.table-wrap{overflow:auto;border:1px solid #ddd;border-radius:6px}
+table{width:100%;border-collapse:collapse;min-width:1050px}
+th{background:#f7f7f7;color:#666;text-align:left;font-weight:normal;padding:15px 18px;border-bottom:1px solid #ddd}
+td{padding:16px 18px;border-bottom:1px solid #eee;vertical-align:top}
+.product{display:flex;gap:12px;min-width:390px}
+.product img{width:68px;height:68px;object-fit:cover;border-radius:5px;border:1px solid #eee}
+.product-title{font-weight:600;line-height:1.35}
+.muted{color:#888;font-size:13px;margin-top:7px}
+.badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;background:#fff0ee;color:#f4513d}
+.stage{font-weight:bold;margin-top:8px}
+.link{color:#1677ff;text-decoration:none;display:block;margin:7px 0}
+.link:hover{text-decoration:underline}
+.actions{white-space:nowrap}
+.empty{text-align:center;padding:60px;color:#999}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:20px;z-index:10}
+.modal{background:#fff;width:100%;max-width:680px;max-height:90vh;overflow:auto;border-radius:10px;padding:24px}
+.modal h2{margin:0 0 20px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:7px}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-size:14px;font-weight:600}
+.form-control{border:1px solid #ddd;border-radius:6px;padding:10px 12px}
+textarea.form-control{min-height:80px;resize:vertical}
+.preview{width:90px;height:90px;object-fit:cover;border:1px solid #ddd;border-radius:6px;display:none}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+.note{font-size:12px;color:#888}
+@media(max-width:700px){
+ .app{padding:18px 12px}.topbar{align-items:flex-start;flex-direction:column}
+ .tabs{overflow:auto;gap:22px}.filter-row{flex-direction:column}.select{min-width:0;width:100%}
+ .form-grid{grid-template-columns:1fr}.form-group.full{grid-column:auto}
+ .summary{align-items:flex-start;gap:10px;flex-direction:column}
+}
 </style>
 </head>
 <body>
 <div class="app">
-  <aside class="sidebar">
-    <div class="logo">Jersey <span>PO</span></div>
-    <div class="nav">
-      <button class="active" onclick="showDashboard()">Dashboard</button>
-      <button onclick="showDashboard()">Order</button>
-      <button onclick="openForm()">+ Tambah Order</button>
+  <div class="topbar">
+    <h1>Pesanan Saya</h1>
+    <div>
+      <button class="btn" onclick="exportData()">Export</button>
+      <button class="btn" onclick="openModal()">+ Tambah Pesanan</button>
     </div>
-  </aside>
+  </div>
 
-  <main class="main">
-    <header class="topbar">
-      <div><h1>Produksi Pre Order</h1><small>Tracking order jersey Shopee</small></div>
-      <button class="btn btn-primary" onclick="openForm()">+ Tambah Order</button>
-    </header>
+  <div class="tabs">
+    <div class="tab active" data-tab="Semua">Semua <span id="allCount"></span></div>
+    <div class="tab" data-tab="Belum Diproses">Belum Diproses <span id="newCount"></span></div>
+    <div class="tab" data-tab="Diproses">Diproses <span id="processCount"></span></div>
+    <div class="tab" data-tab="Selesai">Selesai <span id="doneCount"></span></div>
+  </div>
 
-    <section class="content">
-      <div class="stats">
-        <div class="stat"><b id="total">0</b><span>Total Order</span></div>
-        <div class="stat"><b id="today">0</b><span>Deadline Hari Ini</span></div>
-        <div class="stat"><b id="urgent">0</b><span>Prioritas</span></div>
-        <div class="stat"><b id="late">0</b><span>Terlambat</span></div>
-      </div>
+  <div class="filters">
+    <div class="statuses">
+      <span>Status Pesanan</span>
+      <button class="pill active" data-stage="Semua">Semua</button>
+      <button class="pill" data-stage="Maintenance Desain">Maintenance Desain</button>
+      <button class="pill" data-stage="Print Press">Print Press</button>
+      <button class="pill" data-stage="Jahit">Jahit</button>
+      <button class="pill" data-stage="Kirim Ekspedisi">Kirim Ekspedisi</button>
+    </div>
+    <div class="filter-row">
+      <input id="search" class="field search" placeholder="Masukkan no. pesanan / nama pembeli / produk" oninput="render()">
+      <select id="filterStage" class="field select" onchange="render()">
+        <option value="Semua">Semua Tahap</option>
+        <option>Maintenance Desain</option>
+        <option>Print Press</option>
+        <option>Jahit</option>
+        <option>Kirim Ekspedisi</option>
+        <option>Selesai</option>
+      </select>
+      <button class="btn" onclick="resetFilter()">Atur Ulang</button>
+    </div>
+  </div>
 
-      <div class="toolbar">
-        <input id="search" class="search" placeholder="Cari nomor order, pembeli, atau nama custom..." oninput="render()">
-        <button class="btn btn-primary" onclick="openForm()">+ Tambah Order</button>
-      </div>
+  <div class="summary">
+    <strong id="totalText">0 Pesanan</strong>
+    <button class="btn primary" onclick="openModal()">+ Tambah Pesanan</button>
+  </div>
 
-      <div class="filters" id="filters">
-        <button class="filter active" data-filter="all">Semua</button>
-        <button class="filter" data-filter="BARU">Baru</button>
-        <button class="filter" data-filter="MAINTENANCE DESAIN">Maintenance Desain</button>
-        <button class="filter" data-filter="PRINT PRESS">Print Press</button>
-        <button class="filter" data-filter="JAHIT">Jahit</button>
-        <button class="filter" data-filter="KIRIM KE EKSPEDISI">Kirim ke Ekspedisi</button>
-        <button class="filter" data-filter="SELESAI">Selesai</button>
-        <button class="filter" data-filter="prioritas">Prioritas</button>
-        <button class="filter" data-filter="today">Deadline Hari Ini</button>
-        <button class="filter" data-filter="late">Terlambat</button>
-      </div>
-
-      <div id="orders" class="orders"></div>
-    </section>
-  </main>
-</div>
-
-<!-- FORM -->
-<div id="formModal" class="modal">
-  <div class="modalbox">
-    <div class="modalhead"><h2 id="formTitle">Tambah Order</h2><button class="close" onclick="closeModal('formModal')">✕</button></div>
-    <form id="orderForm" onsubmit="saveOrder(event)">
-      <input type="hidden" id="editId">
-      <div class="formgrid">
-        <div class="field"><label>Nomor Order Shopee *</label><input id="orderNo" required></div>
-        <div class="field"><label>Nama Pembeli *</label><input id="buyer" required></div>
-        <div class="field"><label>Tanggal Order *</label><input id="orderDate" type="date" required></div>
-        <div class="field"><label>Batas Pengiriman *</label><input id="deadline" type="date" required></div>
-        <div class="field"><label>Foto / Gambar Desain</label><input id="imageFile" type="file" accept="image/*" onchange="previewFile(event)"><img id="preview" class="preview"></div>
-        <div class="field"><label>Link Google Drive Desain</label><input id="drive" type="url" placeholder="https://drive.google.com/..."></div>
-        <div class="field"><label>Custom Nama</label><input id="customName" placeholder="Contoh: ANDI"></div>
-        <div class="field"><label>Nomor Punggung</label><input id="number" placeholder="Contoh: 10"></div>
-        <div class="field full"><label>Catatan Custom / Tambahan</label><textarea id="note" rows="3" placeholder="Contoh: Nomor putih, ukuran besar..."></textarea></div>
-      </div>
-      <div class="form-actions"><button type="button" class="btn btn-light" onclick="closeModal('formModal')">Batal</button><button class="btn btn-primary">Simpan Order</button></div>
-    </form>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:39%">Produk</th>
+          <th>No. Pesanan</th>
+          <th>Pembeli</th>
+          <th>Status / Tahap</th>
+          <th>Link Desain</th>
+          <th>Link Resi</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="orderBody"></tbody>
+    </table>
   </div>
 </div>
 
-<!-- DETAIL -->
-<div id="detailModal" class="modal">
-  <div class="modalbox">
-    <div class="modalhead"><h2>Detail Order</h2><button class="close" onclick="closeModal('detailModal')">✕</button></div>
-    <div id="detailContent"></div>
-  </div>
+<div class="modal-bg" id="modalBg">
+ <div class="modal">
+  <h2 id="modalTitle">Tambah Pesanan</h2>
+  <form id="orderForm">
+   <input type="hidden" id="editId">
+   <div class="form-grid">
+    <div class="form-group">
+      <label>No. Pesanan</label>
+      <input id="orderNo" class="form-control" required placeholder="Contoh: 2609046C85624X">
+    </div>
+    <div class="form-group">
+      <label>Nama Pembeli</label>
+      <input id="buyer" class="form-control" required placeholder="Nama pembeli">
+    </div>
+    <div class="form-group full">
+      <label>Nama Produk</label>
+      <input id="product" class="form-control" required placeholder="Contoh: Setelan Anak Custom">
+    </div>
+    <div class="form-group">
+      <label>Variasi / Catatan</label>
+      <input id="variation" class="form-control" placeholder="Contoh: Yellow, M">
+    </div>
+    <div class="form-group">
+      <label>Tahap Produksi</label>
+      <select id="stage" class="form-control">
+        <option>Maintenance Desain</option>
+        <option>Print Press</option>
+        <option>Jahit</option>
+        <option>Kirim Ekspedisi</option>
+        <option>Selesai</option>
+      </select>
+    </div>
+    <div class="form-group full">
+      <label>Foto Produk</label>
+      <input id="photo" class="form-control" type="file" accept="image/*">
+      <img id="preview" class="preview">
+      <span class="note">Foto disimpan di browser ini. Gunakan gambar kecil agar penyimpanan tetap ringan.</span>
+    </div>
+    <div class="form-group full">
+      <label>Link Google Drive Desain</label>
+      <input id="designLink" class="form-control" type="url" placeholder="https://drive.google.com/...">
+    </div>
+    <div class="form-group full">
+      <label>Link Google Drive Resi</label>
+      <input id="receiptLink" class="form-control" type="url" placeholder="https://drive.google.com/...">
+    </div>
+    <div class="form-group full">
+      <label>Catatan</label>
+      <textarea id="notes" class="form-control" placeholder="Nama, nomor punggung, request custom, dll."></textarea>
+    </div>
+   </div>
+   <div class="modal-actions">
+    <button type="button" class="btn" onclick="closeModal()">Batal</button>
+    <button type="submit" class="btn primary">Simpan Pesanan</button>
+   </div>
+  </form>
+ </div>
 </div>
 
 <script>
-const KEY='jersey_po_orders_v1';
-const statuses=['BARU','MAINTENANCE DESAIN','PRINT PRESS','JAHIT','KIRIM KE EKSPEDISI','SELESAI'];
+const KEY='pesanan_jersey_v1';
 let orders=JSON.parse(localStorage.getItem(KEY)||'[]');
-let currentFilter='all';
-let pendingImage=null;
+let activeTab='Semua';
+let activeStage='Semua';
+let pendingPhoto='';
 
-function saveData(){localStorage.setItem(KEY,JSON.stringify(orders));}
-function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
-function todayStr(){return new Date().toISOString().slice(0,10)}
-function fmtDate(s){if(!s)return '-';return new Date(s+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}
-function fmtDateTime(s){return new Date(s).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-function daysLeft(deadline){
-  const a=new Date(todayStr()+'T00:00:00'), b=new Date(deadline+'T00:00:00');
-  return Math.ceil((b-a)/86400000);
-}
-function priority(deadline){
-  const d=daysLeft(deadline);
-  if(d<0)return ['TERLAMBAT','terlambat'];
-  if(d<=1)return ['PRIORITAS','prioritas'];
-  if(d<=2)return ['SEGERA','segera'];
-  return ['AMAN','aman'];
-}
-function statusClass(s){
-  return {'BARU':'baru','MAINTENANCE DESAIN':'maintenance','PRINT PRESS':'print','JAHIT':'jahit','KIRIM KE EKSPEDISI':'kirim','SELESAI':'selesai'}[s]||'baru';
-}
-function statusLabel(s){return s==='MAINTENANCE DESAIN'?'Maintenance Desain':s==='PRINT PRESS'?'Print Press':s==='KIRIM KE EKSPEDISI'?'Kirim ke Ekspedisi':s.charAt(0)+s.slice(1).toLowerCase()}
-function render(){
-  const q=(document.getElementById('search').value||'').toLowerCase().trim();
-  let list=[...orders].filter(o=>{
-    const hay=(o.orderNo+' '+o.buyer+' '+o.customName).toLowerCase();
-    if(q && !hay.includes(q))return false;
-    const [p]=priority(o.deadline);
-    if(currentFilter==='all')return true;
-    if(statuses.includes(currentFilter))return o.status===currentFilter;
-    if(currentFilter==='prioritas')return p==='PRIORITAS'||p==='SEGERA';
-    if(currentFilter==='today')return o.deadline===todayStr();
-    if(currentFilter==='late')return p==='TERLAMBAT';
-    return true;
-  });
-  list.sort((a,b)=>{
-    if(a.status==='SELESAI' && b.status!=='SELESAI')return 1;
-    if(b.status==='SELESAI' && a.status!=='SELESAI')return -1;
-    return a.deadline.localeCompare(b.deadline);
-  });
-  document.getElementById('total').textContent=orders.length;
-  document.getElementById('today').textContent=orders.filter(o=>o.deadline===todayStr()&&o.status!=='SELESAI').length;
-  document.getElementById('urgent').textContent=orders.filter(o=>['PRIORITAS','SEGERA'].includes(priority(o.deadline)[0])&&o.status!=='SELESAI').length;
-  document.getElementById('late').textContent=orders.filter(o=>priority(o.deadline)[0]==='TERLAMBAT'&&o.status!=='SELESAI').length;
-  const box=document.getElementById('orders');
-  if(!list.length){box.innerHTML='<div class="empty"><b>Tidak ada order</b><br><small>Tambahkan order Shopee untuk mulai tracking produksi.</small></div>';return}
-  box.innerHTML=list.map(card).join('');
-}
-function card(o){
-  const [p,pc]=priority(o.deadline), sc=statusClass(o.status);
-  const image=o.image?`<img src="${o.image}" alt="Desain">`:'<div class="placeholder">Belum ada desain</div>';
-  const drive=o.drive?`<a class="drive" href="${esc(o.drive)}" target="_blank" rel="noopener">↗ Buka Google Drive</a>`:'';
-  return `<article class="order">
-    <div class="priority-strip ${pc}"></div>
-    <div class="design">${image}</div>
-    <div class="cardbody">
-      ${o.status!=='SELESAI'&&p!=='AMAN'?`<span class="priority">${p}</span>`:''}
-      <div class="row-between"><div><div class="label">Order Shopee</div><div class="orderid">${esc(o.orderNo)}</div><div class="buyer">${esc(o.buyer)}</div></div><span class="badge ${sc}">${statusLabel(o.status)}</span></div>
-      <div class="deadline"><div><div class="label">Deadline</div><strong>${fmtDate(o.deadline)}</strong></div><div style="text-align:right"><small>${deadlineText(o.deadline,o.status)}</small></div></div>
-      <div class="custom"><div class="label">Custom</div><div class="custom-grid"><div><div class="label">Nama</div><div class="value">${esc(o.customName||'-')}</div></div><div><div class="label">No</div><div class="value">${esc(o.number||'-')}</div></div></div>${o.note?`<div style="margin-top:9px"><div class="label">Catatan</div><div class="note">${esc(o.note)}</div></div>`:''}</div>
-      ${drive}
-      <div class="actions"><button class="btn btn-light btn-small" onclick="openDetail('${o.id}')">Detail</button><button class="btn btn-primary btn-small" onclick="nextStatus('${o.id}')">${o.status==='SELESAI'?'Selesai':'Ubah Status'}</button></div>
-    </div>
-  </article>`;
-}
-function deadlineText(d,s){
-  if(s==='SELESAI')return 'Selesai';
-  const n=daysLeft(d);
-  if(n<0)return `Lewat ${Math.abs(n)} hari`;
-  if(n===0)return 'Hari ini';
-  if(n===1)return 'Besok';
-  return `${n} hari lagi`;
-}
-function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-function openForm(id=null){
-  pendingImage=null;
-  document.getElementById('orderForm').reset();
-  document.getElementById('editId').value='';
-  document.getElementById('preview').style.display='none';
-  document.getElementById('formTitle').textContent=id?'Edit Order':'Tambah Order';
-  document.getElementById('orderDate').value=todayStr();
+const $=id=>document.getElementById(id);
+
+function save(){localStorage.setItem(KEY,JSON.stringify(orders));render();}
+
+function openModal(id=null){
+  $('modalBg').style.display='flex';
+  $('modalTitle').textContent=id?'Edit Pesanan':'Tambah Pesanan';
+  $('orderForm').reset(); $('editId').value=id||''; pendingPhoto='';
+  $('preview').style.display='none';
   if(id){
     const o=orders.find(x=>x.id===id); if(!o)return;
-    document.getElementById('editId').value=o.id;
-    document.getElementById('orderNo').value=o.orderNo;
-    document.getElementById('buyer').value=o.buyer;
-    document.getElementById('orderDate').value=o.orderDate;
-    document.getElementById('deadline').value=o.deadline;
-    document.getElementById('drive').value=o.drive||'';
-    document.getElementById('customName').value=o.customName||'';
-    document.getElementById('number').value=o.number||'';
-    document.getElementById('note').value=o.note||'';
-    pendingImage=o.image||null;
-    if(o.image){document.getElementById('preview').src=o.image;document.getElementById('preview').style.display='block'}
+    $('orderNo').value=o.orderNo; $('buyer').value=o.buyer; $('product').value=o.product;
+    $('variation').value=o.variation||''; $('stage').value=o.stage;
+    $('designLink').value=o.designLink||''; $('receiptLink').value=o.receiptLink||'';
+    $('notes').value=o.notes||'';
+    if(o.photo){$('preview').src=o.photo;$('preview').style.display='block';}
   }
-  document.getElementById('formModal').classList.add('show');
 }
-function previewFile(e){
-  const file=e.target.files[0]; if(!file)return;
-  const reader=new FileReader();
-  reader.onload=()=>{pendingImage=reader.result;document.getElementById('preview').src=reader.result;document.getElementById('preview').style.display='block'};
-  reader.readAsDataURL(file);
+function closeModal(){$('modalBg').style.display='none'}
+$('modalBg').addEventListener('click',e=>{if(e.target.id==='modalBg')closeModal()});
+
+$('photo').addEventListener('change',e=>{
+ const file=e.target.files[0]; if(!file)return;
+ const reader=new FileReader();
+ reader.onload=()=>{pendingPhoto=reader.result;$('preview').src=pendingPhoto;$('preview').style.display='block'};
+ reader.readAsDataURL(file);
+});
+
+$('orderForm').addEventListener('submit',e=>{
+ e.preventDefault();
+ const id=$('editId').value;
+ const old=id?orders.find(x=>x.id===id):null;
+ const data={
+  id:id||Date.now().toString(),
+  orderNo:$('orderNo').value.trim(),buyer:$('buyer').value.trim(),
+  product:$('product').value.trim(),variation:$('variation').value.trim(),
+  stage:$('stage').value,designLink:$('designLink').value.trim(),
+  receiptLink:$('receiptLink').value.trim(),notes:$('notes').value.trim(),
+  photo:pendingPhoto||old?.photo||''
+ };
+ if(id) orders=orders.map(x=>x.id===id?data:x); else orders.unshift(data);
+ save();closeModal();
+});
+
+function del(id){
+ if(confirm('Hapus pesanan ini?')){orders=orders.filter(x=>x.id!==id);save();}
 }
-function saveOrder(e){
-  e.preventDefault();
-  const id=document.getElementById('editId').value;
-  const base={orderNo:document.getElementById('orderNo').value.trim(),buyer:document.getElementById('buyer').value.trim(),orderDate:document.getElementById('orderDate').value,deadline:document.getElementById('deadline').value,drive:document.getElementById('drive').value.trim(),customName:document.getElementById('customName').value.trim().toUpperCase(),number:document.getElementById('number').value.trim(),note:document.getElementById('note').value.trim(),image:pendingImage};
-  if(id){
-    const o=orders.find(x=>x.id===id); Object.assign(o,base);
-  }else{
-    orders.push({id:uid(),...base,status:'BARU',history:[{status:'BARU',time:new Date().toISOString()}]});
-  }
-  saveData();closeModal('formModal');render();
+function edit(id){openModal(id)}
+function advance(id){
+ const seq=['Maintenance Desain','Print Press','Jahit','Kirim Ekspedisi','Selesai'];
+ const o=orders.find(x=>x.id===id), i=seq.indexOf(o.stage);
+ if(i<seq.length-1){o.stage=seq[i+1];save()}
 }
-function nextStatus(id){
-  const o=orders.find(x=>x.id===id); if(!o)return;
-  const i=statuses.indexOf(o.status);
-  if(i<statuses.length-1){
-    o.status=statuses[i+1]; o.history=o.history||[]; o.history.push({status:o.status,time:new Date().toISOString()});
-    saveData();render();
-  }else openDetail(id);
+function render(){
+ const q=$('search').value.toLowerCase();
+ const filter=$('filterStage').value;
+ let list=orders.filter(o=>{
+  const matchQ=!q||[o.orderNo,o.buyer,o.product,o.variation].join(' ').toLowerCase().includes(q);
+  const matchTab=activeTab==='Semua'||(activeTab==='Belum Diproses'&&o.stage==='Maintenance Desain')||(activeTab==='Diproses'&&['Print Press','Jahit','Kirim Ekspedisi'].includes(o.stage))||(activeTab==='Selesai'&&o.stage==='Selesai');
+  const matchStage=filter==='Semua'||o.stage===filter;
+  return matchQ&&matchTab&&matchStage&&(activeStage==='Semua'||o.stage===activeStage);
+ });
+ $('totalText').textContent=list.length+' Pesanan';
+ $('allCount').textContent=orders.length?`(${orders.length})`:'';
+ $('newCount').textContent=orders.filter(o=>o.stage==='Maintenance Desain').length?`(${orders.filter(o=>o.stage==='Maintenance Desain').length})`:'';
+ $('processCount').textContent=orders.filter(o=>['Print Press','Jahit','Kirim Ekspedisi'].includes(o.stage)).length?`(${orders.filter(o=>['Print Press','Jahit','Kirim Ekspedisi'].includes(o.stage)).length})`:'';
+ $('doneCount').textContent=orders.filter(o=>o.stage==='Selesai').length?`(${orders.filter(o=>o.stage==='Selesai').length})`:'';
+
+ $('orderBody').innerHTML=list.length?list.map(o=>`
+ <tr>
+  <td><div class="product">
+   ${o.photo?`<img src="${o.photo}" alt="">`:`<div style="width:68px;height:68px;border:1px solid #ddd;border-radius:5px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:11px">No Foto</div>`}
+   <div><div class="product-title">${esc(o.product)}</div><div class="muted">${esc(o.variation||'Tanpa variasi')}</div>${o.notes?`<div class="muted">${esc(o.notes)}</div>`:''}</div>
+  </div></td>
+  <td>${esc(o.orderNo)}</td>
+  <td>${esc(o.buyer)}</td>
+  <td><span class="badge">${esc(o.stage)}</span>${o.stage!=='Selesai'?`<div class="stage"><button class="btn" style="padding:6px 10px;margin-top:5px" onclick="advance('${o.id}')">Lanjut Tahap →</button></div>`:''}</td>
+  <td>${o.designLink?`<a class="link" href="${safeUrl(o.designLink)}" target="_blank">Lihat Desain</a>`:'<span class="muted">Belum ada</span>'}</td>
+  <td>${o.receiptLink?`<a class="link" href="${safeUrl(o.receiptLink)}" target="_blank">Lihat Resi</a>`:'<span class="muted">Belum ada</span>'}</td>
+  <td class="actions"><button class="btn" onclick="edit('${o.id}')">Edit</button> <button class="btn danger" onclick="del('${o.id}')">Hapus</button></td>
+ </tr>`).join(''):`<tr><td colspan="7" class="empty">Belum ada pesanan. Klik “+ Tambah Pesanan” untuk memasukkan order.</td></tr>`;
 }
-function changeStatus(id,val){
-  const o=orders.find(x=>x.id===id); if(!o||o.status===val)return;
-  o.status=val;o.history=o.history||[];o.history.push({status:val,time:new Date().toISOString()});
-  saveData();render();openDetail(id);
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function safeUrl(s){try{let u=new URL(s);return ['http:','https:'].includes(u.protocol)?esc(u.href):'#'}catch{return '#'}}
+function resetFilter(){$('search').value='';$('filterStage').value='Semua';activeStage='Semua';document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));document.querySelector('.pill[data-stage="Semua"]').classList.add('active');render()}
+
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');activeTab=t.dataset.tab;render();
+});
+document.querySelectorAll('.pill').forEach(p=>p.onclick=()=>{
+ document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');activeStage=p.dataset.stage;render();
+});
+
+function exportData(){
+ const blob=new Blob([JSON.stringify(orders,null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pesanan-jersey.json';a.click();URL.revokeObjectURL(a.href);
 }
-function openDetail(id){
-  const o=orders.find(x=>x.id===id); if(!o)return;
-  const [p]=priority(o.deadline);
-  const image=o.image?`<img class="detail-img" src="${o.image}" alt="Desain">`:`<div class="detail-img" style="display:flex;align-items:center;justify-content:center;color:#9ca3af">Belum ada desain</div>`;
-  document.getElementById('detailContent').innerHTML=`
-    <div class="detail-layout">${image}<div>
-      <div class="label">Order Shopee</div><h3 style="margin:4px 0 15px">${esc(o.orderNo)}</h3>
-      <div class="detail-list">
-        <div class="detail-item"><div class="label">Pembeli</div><b>${esc(o.buyer)}</b></div>
-        <div class="detail-item"><div class="label">Status</div><select onchange="changeStatus('${o.id}',this.value)">${statuses.map(s=>`<option ${s===o.status?'selected':''} value="${s}">${statusLabel(s)}</option>`).join('')}</select></div>
-        <div class="detail-item"><div class="label">Tanggal Order</div><b>${fmtDate(o.orderDate)}</b></div>
-        <div class="detail-item"><div class="label">Deadline</div><b>${fmtDate(o.deadline)} · ${p}</b></div>
-        <div class="detail-item"><div class="label">Nama</div><b>${esc(o.customName||'-')}</b></div>
-        <div class="detail-item"><div class="label">Nomor</div><b>${esc(o.number||'-')}</b></div>
-        <div class="detail-item full"><div class="label">Catatan</div><div class="note">${esc(o.note||'-')}</div></div>
-      </div>
-      ${o.drive?`<a class="drive" href="${esc(o.drive)}" target="_blank" rel="noopener">↗ Buka File Desain di Google Drive</a>`:''}
-    </div></div>
-    <div class="history"><h3>Riwayat Status</h3>${(o.history||[]).slice().reverse().map(h=>`<div class="history-item"><span class="dot"></span><div><b>${statusLabel(h.status)}</b><br><small>${fmtDateTime(h.time)}</small></div></div>`).join('')}</div>
-    <div class="form-actions"><button class="btn btn-light" onclick="openForm('${o.id}')">Edit Order</button><button class="btn btn-danger" onclick="deleteOrder('${o.id}')">Hapus Order</button></div>`;
-  document.getElementById('detailModal').classList.add('show');
-}
-function deleteOrder(id){
-  const o=orders.find(x=>x.id===id);if(!o)return;
-  if(confirm(`Hapus order ${o.orderNo}?`)){orders=orders.filter(x=>x.id!==id);saveData();closeModal('detailModal');render()}
-}
-function closeModal(id){document.getElementById(id).classList.remove('show')}
-document.querySelectorAll('.filter').forEach(btn=>btn.addEventListener('click',()=>{
-  document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));btn.classList.add('active');currentFilter=btn.dataset.filter;render();
-}));
-window.addEventListener('click',e=>{if(e.target.classList.contains('modal'))e.target.classList.remove('show')});
 render();
 </script>
 </body>
