@@ -36,7 +36,7 @@ td{padding:16px 18px;border-bottom:1px solid #eee;vertical-align:top}
 .product img{width:68px;height:68px;object-fit:cover;border-radius:5px;border:1px solid #eee}
 .product-title{font-weight:600;line-height:1.35}
 .muted{color:#888;font-size:13px;margin-top:7px}
-.badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;background:#fff0ee;color:#f4513d}
+.deadline{font-size:13px;font-weight:600;margin-top:6px}.late{color:#e53935}.ontime{color:#2e7d32}.badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;background:#fff0ee;color:#f4513d}
 .stage{font-weight:bold;margin-top:8px}
 .link{color:#1677ff;text-decoration:none;display:block;margin:7px 0}
 .link:hover{text-decoration:underline}
@@ -68,18 +68,30 @@ textarea.form-control{min-height:80px;resize:vertical}
     <h1>Pesanan Saya</h1>
     <div>
       <button class="btn" onclick="exportData()">Export</button>
-      <button class="btn" onclick="openModal()">+ Tambah Pesanan</button>
+      <button class="btn" onclick="openProductModal()">+ Tambah Produk</button>
+      <button class="btn primary" onclick="openModal()">+ Tambah Pesanan</button>
     </div>
   </div>
 
   <div class="tabs">
-    <div class="tab active" data-tab="Semua">Semua <span id="allCount"></span></div>
+    <div class="tab active" data-tab="Semua">Pesanan <span id="allCount"></span></div>
+    <div class="tab" data-tab="Produk">Produk</div>
     <div class="tab" data-tab="Belum Diproses">Belum Diproses <span id="newCount"></span></div>
     <div class="tab" data-tab="Diproses">Diproses <span id="processCount"></span></div>
     <div class="tab" data-tab="Selesai">Selesai <span id="doneCount"></span></div>
   </div>
 
-  <div class="filters">
+  <div id="productPanel" style="display:none">
+    <div class="summary">
+      <strong id="productTotalText">0 Produk</strong>
+      <button class="btn primary" onclick="openProductModal()">+ Tambah Produk</button>
+    </div>
+    <div class="table-wrap">
+      <div id="productList" class="product-list" style="padding:0 18px"></div>
+    </div>
+  </div>
+
+  <div id="orderFilters" class="filters">
     <div class="statuses">
       <span>Status Pesanan</span>
       <button class="pill active" data-stage="Semua">Semua</button>
@@ -102,18 +114,19 @@ textarea.form-control{min-height:80px;resize:vertical}
     </div>
   </div>
 
-  <div class="summary">
+  <div id="orderSummary" class="summary">
     <strong id="totalText">0 Pesanan</strong>
     <button class="btn primary" onclick="openModal()">+ Tambah Pesanan</button>
   </div>
 
-  <div class="table-wrap">
+  <div id="orderTable" class="table-wrap">
     <table>
       <thead>
         <tr>
           <th style="width:39%">Produk</th>
           <th>No. Pesanan</th>
           <th>Pembeli</th>
+          <th>Tanggal</th>
           <th>Status / Tahap</th>
           <th>Link Desain</th>
           <th>Link Resi</th>
@@ -123,6 +136,32 @@ textarea.form-control{min-height:80px;resize:vertical}
       <tbody id="orderBody"></tbody>
     </table>
   </div>
+</div>
+
+
+<div class="modal-bg" id="productModalBg">
+ <div class="modal small">
+  <h2 id="productModalTitle">Tambah Produk</h2>
+  <form id="productForm">
+   <input type="hidden" id="editProductId">
+   <div class="form-grid">
+    <div class="form-group full">
+      <label>Nama Produk</label>
+      <input id="productName" class="form-control" required placeholder="Contoh: Setelan Anak Custom">
+    </div>
+    <div class="form-group full">
+      <label>Foto Produk</label>
+      <input id="productPhoto" class="form-control" type="file" accept="image/*">
+      <img id="productPreview" class="preview">
+      <span class="note">Foto produk akan otomatis muncul di setiap order yang memilih produk ini.</span>
+    </div>
+   </div>
+   <div class="modal-actions">
+    <button type="button" class="btn" onclick="closeProductModal()">Batal</button>
+    <button type="submit" class="btn primary">Simpan Produk</button>
+   </div>
+  </form>
+ </div>
 </div>
 
 <div class="modal-bg" id="modalBg">
@@ -139,9 +178,21 @@ textarea.form-control{min-height:80px;resize:vertical}
       <label>Nama Pembeli</label>
       <input id="buyer" class="form-control" required placeholder="Nama pembeli">
     </div>
+    <div class="form-group">
+      <label>Tanggal Pemesanan</label>
+      <input id="orderDate" class="form-control" type="date" required>
+    </div>
+    <div class="form-group">
+      <label>Tanggal Deadline Pengiriman</label>
+      <input id="deadline" class="form-control" type="date" required>
+      <span class="note">Akan muncul notice merah jika deadline sudah lewat dan pesanan belum selesai.</span>
+    </div>
     <div class="form-group full">
-      <label>Nama Produk</label>
-      <input id="product" class="form-control" required placeholder="Contoh: Setelan Anak Custom">
+      <label>Produk</label>
+      <select id="productId" class="form-control" required onchange="updateProductPreview()">
+        <option value="">Pilih produk</option>
+      </select>
+      <div id="selectedProductPreview" style="margin-top:8px"></div>
     </div>
     <div class="form-group">
       <label>Variasi / Catatan</label>
@@ -186,53 +237,130 @@ textarea.form-control{min-height:80px;resize:vertical}
 
 <script>
 const KEY='pesanan_jersey_v1';
+const PRODUCT_KEY='produk_jersey_v1';
 let orders=JSON.parse(localStorage.getItem(KEY)||'[]');
+let products=JSON.parse(localStorage.getItem(PRODUCT_KEY)||'[]');
 let activeTab='Semua';
 let activeStage='Semua';
 let pendingPhoto='';
+let pendingProductPhoto='';
 
 const $=id=>document.getElementById(id);
-
 function save(){localStorage.setItem(KEY,JSON.stringify(orders));render();}
+function saveProducts(){localStorage.setItem(PRODUCT_KEY,JSON.stringify(products));renderProducts();populateProductSelect();}
 
 function openModal(id=null){
+  if(!products.length){
+    alert('Buat produk terlebih dahulu di menu Produk.');
+    showTab('Produk');
+    openProductModal();
+    return;
+  }
   $('modalBg').style.display='flex';
   $('modalTitle').textContent=id?'Edit Pesanan':'Tambah Pesanan';
-  $('orderForm').reset(); $('editId').value=id||''; pendingPhoto='';
+  $('orderForm').reset(); $('editId').value=id||''; pendingPhoto=''; $('orderDate').value=todayISO(); $('deadline').value=todayISO();
   $('preview').style.display='none';
+  populateProductSelect();
   if(id){
     const o=orders.find(x=>x.id===id); if(!o)return;
-    $('orderNo').value=o.orderNo; $('buyer').value=o.buyer; $('product').value=o.product;
+    $('orderNo').value=o.orderNo; $('buyer').value=o.buyer; $('orderDate').value=o.orderDate||todayISO(); $('deadline').value=o.deadline||todayISO();
+    $('productId').value=o.productId || products.find(p=>p.name===o.product)?.id || '';
     $('variation').value=o.variation||''; $('stage').value=o.stage;
     $('designLink').value=o.designLink||''; $('receiptLink').value=o.receiptLink||'';
     $('notes').value=o.notes||'';
-    if(o.photo){$('preview').src=o.photo;$('preview').style.display='block';}
+    updateProductPreview();
   }
 }
 function closeModal(){$('modalBg').style.display='none'}
 $('modalBg').addEventListener('click',e=>{if(e.target.id==='modalBg')closeModal()});
 
+function openProductModal(id=null){
+  $('productModalBg').style.display='flex';
+  $('productModalTitle').textContent=id?'Edit Produk':'Tambah Produk';
+  $('productForm').reset(); $('editProductId').value=id||''; pendingProductPhoto='';
+  $('productPreview').style.display='none';
+  if(id){
+    const p=products.find(x=>x.id===id); if(!p)return;
+    $('productName').value=p.name;
+    if(p.photo){$('productPreview').src=p.photo;$('productPreview').style.display='block';}
+  }
+}
+function closeProductModal(){$('productModalBg').style.display='none'}
+$('productModalBg').addEventListener('click',e=>{if(e.target.id==='productModalBg')closeProductModal()});
+
+$('productPhoto').addEventListener('change',e=>{
+  const file=e.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{pendingProductPhoto=reader.result;$('productPreview').src=pendingProductPhoto;$('productPreview').style.display='block'};
+  reader.readAsDataURL(file);
+});
+
+$('productForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const id=$('editProductId').value;
+  const old=id?products.find(x=>x.id===id):null;
+  const name=$('productName').value.trim();
+  if(products.some(p=>p.name.toLowerCase()===name.toLowerCase() && p.id!==id)){
+    alert('Nama produk sudah ada. Gunakan nama yang berbeda.');
+    return;
+  }
+  const data={id:id||Date.now().toString(),name,photo:pendingProductPhoto||old?.photo||''};
+  if(id) products=products.map(x=>x.id===id?data:x); else products.unshift(data);
+  saveProducts(); closeProductModal();
+});
+
+function delProduct(id){
+  const used=orders.some(o=>o.productId===id);
+  const msg=used
+    ? 'Produk ini sudah dipakai pada order. Hapus produk? Foto pada order lama tetap tersimpan.'
+    : 'Hapus produk ini?';
+  if(confirm(msg)){
+    products=products.filter(x=>x.id!==id);
+    saveProducts();
+  }
+}
+function editProduct(id){openProductModal(id)}
+
+function populateProductSelect(){
+  const select=$('productId');
+  if(!select)return;
+  const current=select.value;
+  select.innerHTML='<option value="">Pilih produk</option>'+products.map(p=>`<option value="${escAttr(p.id)}">${esc(p.name)}</option>`).join('');
+  if(products.some(p=>p.id===current))select.value=current;
+  updateProductPreview();
+}
+function updateProductPreview(){
+  const id=$('productId')?.value;
+  const p=products.find(x=>x.id===id);
+  $('selectedProductPreview').innerHTML=p
+    ? `<div style="display:flex;align-items:center;gap:10px"><img src="${p.photo||''}" style="width:58px;height:58px;object-fit:cover;border:1px solid #ddd;border-radius:6px;${p.photo?'':'display:none'}"><span class="muted">Foto produk: <strong>${esc(p.name)}</strong></span></div>`
+    : '';
+}
+
 $('photo').addEventListener('change',e=>{
- const file=e.target.files[0]; if(!file)return;
- const reader=new FileReader();
- reader.onload=()=>{pendingPhoto=reader.result;$('preview').src=pendingPhoto;$('preview').style.display='block'};
- reader.readAsDataURL(file);
+  const file=e.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{pendingPhoto=reader.result;$('preview').src=pendingPhoto;$('preview').style.display='block'};
+  reader.readAsDataURL(file);
 });
 
 $('orderForm').addEventListener('submit',e=>{
- e.preventDefault();
- const id=$('editId').value;
- const old=id?orders.find(x=>x.id===id):null;
- const data={
-  id:id||Date.now().toString(),
-  orderNo:$('orderNo').value.trim(),buyer:$('buyer').value.trim(),
-  product:$('product').value.trim(),variation:$('variation').value.trim(),
-  stage:$('stage').value,designLink:$('designLink').value.trim(),
-  receiptLink:$('receiptLink').value.trim(),notes:$('notes').value.trim(),
-  photo:pendingPhoto||old?.photo||''
- };
- if(id) orders=orders.map(x=>x.id===id?data:x); else orders.unshift(data);
- save();closeModal();
+  e.preventDefault();
+  const id=$('editId').value;
+  const old=id?orders.find(x=>x.id===id):null;
+  const productId=$('productId').value;
+  const p=products.find(x=>x.id===productId);
+  if(!p){alert('Pilih produk terlebih dahulu.');return;}
+  const data={
+    id:id||Date.now().toString(),
+    orderNo:$('orderNo').value.trim(),buyer:$('buyer').value.trim(),orderDate:$('orderDate').value,deadline:$('deadline').value,
+    productId:productId, product:p.name, variation:$('variation').value.trim(),
+    stage:$('stage').value,designLink:$('designLink').value.trim(),
+    receiptLink:$('receiptLink').value.trim(),notes:$('notes').value.trim(),
+    photo:pendingPhoto || old?.photo || p.photo || ''
+  };
+  if(id) orders=orders.map(x=>x.id===id?data:x); else orders.unshift(data);
+  save();closeModal();
 });
 
 function del(id){
@@ -255,9 +383,12 @@ function render(){
  });
  $('totalText').textContent=list.length+' Pesanan';
  $('allCount').textContent=orders.length?`(${orders.length})`:'';
- $('newCount').textContent=orders.filter(o=>o.stage==='Maintenance Desain').length?`(${orders.filter(o=>o.stage==='Maintenance Desain').length})`:'';
- $('processCount').textContent=orders.filter(o=>['Print Press','Jahit','Kirim Ekspedisi'].includes(o.stage)).length?`(${orders.filter(o=>['Print Press','Jahit','Kirim Ekspedisi'].includes(o.stage)).length})`:'';
- $('doneCount').textContent=orders.filter(o=>o.stage==='Selesai').length?`(${orders.filter(o=>o.stage==='Selesai').length})`:'';
+ const n=orders.filter(o=>o.stage==='Maintenance Desain').length;
+ const pr=orders.filter(o=>['Print Press','Jahit','Kirim Ekspedisi'].includes(o.stage)).length;
+ const d=orders.filter(o=>o.stage==='Selesai').length;
+ $('newCount').textContent=n?`(${n})`:'';
+ $('processCount').textContent=pr?`(${pr})`:'';
+ $('doneCount').textContent=d?`(${d})`:'';
 
  $('orderBody').innerHTML=list.length?list.map(o=>`
  <tr>
@@ -267,27 +398,76 @@ function render(){
   </div></td>
   <td>${esc(o.orderNo)}</td>
   <td>${esc(o.buyer)}</td>
+  <td>
+    <div>${formatDate(o.orderDate)}</div>
+    <div class="muted">Deadline: ${formatDate(o.deadline)}</div>
+    ${deadlineNotice(o)}
+  </td>
   <td><span class="badge">${esc(o.stage)}</span>${o.stage!=='Selesai'?`<div class="stage"><button class="btn" style="padding:6px 10px;margin-top:5px" onclick="advance('${o.id}')">Lanjut Tahap →</button></div>`:''}</td>
   <td>${o.designLink?`<a class="link" href="${safeUrl(o.designLink)}" target="_blank">Lihat Desain</a>`:'<span class="muted">Belum ada</span>'}</td>
   <td>${o.receiptLink?`<a class="link" href="${safeUrl(o.receiptLink)}" target="_blank">Lihat Resi</a>`:'<span class="muted">Belum ada</span>'}</td>
   <td class="actions"><button class="btn" onclick="edit('${o.id}')">Edit</button> <button class="btn danger" onclick="del('${o.id}')">Hapus</button></td>
- </tr>`).join(''):`<tr><td colspan="7" class="empty">Belum ada pesanan. Klik “+ Tambah Pesanan” untuk memasukkan order.</td></tr>`;
+ </tr>`).join(''):`<tr><td colspan="8" class="empty">Belum ada pesanan. Klik “+ Tambah Pesanan” untuk memasukkan order.</td></tr>`;
+}
+function renderProducts(){
+ $('productTotalText').textContent=products.length+' Produk';
+ $('productList').innerHTML=products.length?products.map(p=>`
+  <div class="product-row">
+   ${p.photo?`<img src="${p.photo}" alt="">`:`<div class="no-photo">No Foto</div>`}
+   <div class="product-info"><strong>${esc(p.name)}</strong><span class="muted">${orders.filter(o=>o.productId===p.id).length} order</span></div>
+   <button class="btn" onclick="editProduct('${p.id}')">Edit</button>
+   <button class="btn danger" onclick="delProduct('${p.id}')">Hapus</button>
+  </div>`).join(''):`<div class="empty">Belum ada produk. Tambahkan produk terlebih dahulu.</div>`;
+}
+function showTab(tab){
+ activeTab=tab;
+ document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
+ const productsMode=tab==='Produk';
+ $('productPanel').style.display=productsMode?'block':'none';
+ $('orderFilters').style.display=productsMode?'none':'block';
+ $('orderSummary').style.display=productsMode?'none':'flex';
+ $('orderTable').style.display=productsMode?'none':'block';
+ if(productsMode)renderProducts(); else render();
+}
+function todayISO(){
+ const d=new Date(); const local=new Date(d.getTime()-d.getTimezoneOffset()*60000); return local.toISOString().slice(0,10);
+}
+function formatDate(v){
+ if(!v)return '-';
+ const d=new Date(v+'T00:00:00');
+ return d.toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function deadlineNotice(o){
+ if(!o.deadline || o.stage==='Selesai') return '';
+ const today=todayISO();
+ if(o.deadline<today) return '<div class="deadline late">TERLAMBAT — deadline sudah lewat</div>';
+ if(o.deadline===today) return '<div class="deadline late">NOTICE — deadline hari ini</div>';
+ const diff=Math.ceil((new Date(o.deadline+'T00:00:00')-new Date(today+'T00:00:00'))/86400000);
+ if(diff===1)return '<div class="deadline late">NOTICE — deadline besok</div>';
+ if(diff<=3)return `<div class="deadline">Deadline ${diff} hari lagi</div>`;
+ return '';
 }
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function escAttr(s){return esc(s)}
 function safeUrl(s){try{let u=new URL(s);return ['http:','https:'].includes(u.protocol)?esc(u.href):'#'}catch{return '#'}}
-function resetFilter(){$('search').value='';$('filterStage').value='Semua';activeStage='Semua';document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));document.querySelector('.pill[data-stage="Semua"]').classList.add('active');render()}
+function resetFilter(){
+ $('search').value='';$('filterStage').value='Semua';activeStage='Semua';
+ document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+ document.querySelector('.pill[data-stage="Semua"]').classList.add('active');render()
+}
 
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
- document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');activeTab=t.dataset.tab;render();
-});
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
 document.querySelectorAll('.pill').forEach(p=>p.onclick=()=>{
- document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');activeStage=p.dataset.stage;render();
+ document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+ p.classList.add('active');activeStage=p.dataset.stage;render();
 });
 
 function exportData(){
- const blob=new Blob([JSON.stringify(orders,null,2)],{type:'application/json'});
- const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pesanan-jersey.json';a.click();URL.revokeObjectURL(a.href);
+ const blob=new Blob([JSON.stringify({products,orders},null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pesanan-jersey-data.json';a.click();URL.revokeObjectURL(a.href);
 }
+populateProductSelect();
+renderProducts();
 render();
 </script>
 </body>
