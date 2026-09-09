@@ -1,491 +1,184 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jersey PO - Pesanan Saya</title>
-<style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#fff;color:#222}
-button,input,select,textarea{font:inherit}
-.app{max-width:1600px;margin:auto;padding:28px 24px}
-h1{font-size:24px;margin:0 0 28px}
-.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.btn{border:1px solid #ddd;background:#fff;border-radius:6px;padding:10px 18px;cursor:pointer}
-.btn:hover{background:#f7f7f7}
-.btn.primary{background:#ff4d3d;border-color:#ff4d3d;color:#fff}
-.btn.danger{color:#e53935;border-color:#ffc9c5}
-.tabs{display:flex;gap:34px;border-bottom:1px solid #ddd;margin-top:20px}
-.tab{padding:14px 5px 18px;cursor:pointer}
-.tab.active{color:#f4513d;font-weight:bold;border-bottom:3px solid #f4513d}
-.filters{padding:24px 0 10px}
-.filter-row{display:flex;gap:18px;margin-bottom:18px}
-.field{height:40px;border:1px solid #ddd;border-radius:6px;padding:0 14px;background:#fff}
-.search{flex:1}
-.select{min-width:300px}
-.statuses{display:flex;gap:10px;align-items:center;margin-bottom:18px}
-.pill{padding:9px 18px;border:1px solid #ddd;border-radius:22px;background:#fff;cursor:pointer}
-.pill.active{border-color:#ff4d3d;color:#ff4d3d}
-.summary{display:flex;justify-content:space-between;align-items:center;margin:24px 0 14px}
-.summary strong{font-size:20px}
-.table-wrap{overflow:auto;border:1px solid #ddd;border-radius:6px}
-table{width:100%;border-collapse:collapse;min-width:1050px}
-th{background:#f7f7f7;color:#666;text-align:left;font-weight:normal;padding:15px 18px;border-bottom:1px solid #ddd}
-td{padding:16px 18px;border-bottom:1px solid #eee;vertical-align:top}
-.product{display:flex;gap:12px;min-width:390px}
-.product img{width:68px;height:68px;object-fit:cover;border-radius:5px;border:1px solid #eee}
-.product-title{font-weight:600;line-height:1.35}
-.muted{color:#888;font-size:13px;margin-top:7px}
-.deadline{font-size:13px;font-weight:600;margin-top:6px}.late{color:#e53935}.ontime{color:#2e7d32}.badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;background:#fff0ee;color:#f4513d}
-.stage{font-weight:bold;margin-top:8px}
-.link{color:#1677ff;text-decoration:none;display:block;margin:7px 0}
-.link:hover{text-decoration:underline}
-.actions{white-space:nowrap}
-.empty{text-align:center;padding:60px;color:#999}
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;padding:20px;z-index:10}
-.modal{background:#fff;width:100%;max-width:680px;max-height:90vh;overflow:auto;border-radius:10px;padding:24px}
-.modal h2{margin:0 0 20px}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.form-group{display:flex;flex-direction:column;gap:7px}
-.form-group.full{grid-column:1/-1}
-.form-group label{font-size:14px;font-weight:600}
-.form-control{border:1px solid #ddd;border-radius:6px;padding:10px 12px}
-textarea.form-control{min-height:80px;resize:vertical}
-.preview{width:90px;height:90px;object-fit:cover;border:1px solid #ddd;border-radius:6px;display:none}
-.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
-.note{font-size:12px;color:#888}
-@media(max-width:700px){
- .app{padding:18px 12px}.topbar{align-items:flex-start;flex-direction:column}
- .tabs{overflow:auto;gap:22px}.filter-row{flex-direction:column}.select{min-width:0;width:100%}
- .form-grid{grid-template-columns:1fr}.form-group.full{grid-column:auto}
- .summary{align-items:flex-start;gap:10px;flex-direction:column}
-}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <title>Jersey PO</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<div class="app">
-  <div class="topbar">
-    <h1>Pesanan Saya</h1>
-    <div>
-      <button class="btn" onclick="exportData()">Export</button>
-      <button class="btn" onclick="openProductModal()">+ Tambah Produk</button>
-      <button class="btn primary" onclick="openModal()">+ Tambah Pesanan</button>
+  <div id="toast" class="toast" role="status"></div>
+
+  <div id="authView" class="auth-screen hidden">
+    <div class="auth-card">
+      <div class="brand-mark">JP</div>
+      <h1>Jersey PO</h1>
+      <p class="muted">Login untuk mengelola pesanan jersey.</p>
+      <form id="loginForm">
+        <label>Email<input id="loginEmail" type="email" autocomplete="email" required></label>
+        <label>Password<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+        <button class="btn btn-primary btn-block" type="submit">Masuk</button>
+      </form>
+      <p class="auth-note">Akun dibuat dari Supabase Authentication.</p>
     </div>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" data-tab="Semua">Pesanan <span id="allCount"></span></div>
-    <div class="tab" data-tab="Produk">Produk</div>
-    <div class="tab" data-tab="Belum Diproses">Belum Diproses <span id="newCount"></span></div>
-    <div class="tab" data-tab="Diproses">Diproses <span id="processCount"></span></div>
-    <div class="tab" data-tab="Selesai">Selesai <span id="doneCount"></span></div>
+  <div id="appView" class="app hidden">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <div class="brand-mark small">JP</div>
+        <div><strong>Jersey PO</strong><span>Manajemen Pesanan</span></div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-page="dashboard">Dashboard</button>
+        <button class="nav-item" data-page="orders">Pesanan</button>
+        <button class="nav-item" data-page="products">Produk</button>
+        <button class="nav-item" data-page="late">Pesanan Terlambat</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div id="userEmail" class="user-email"></div>
+        <button id="logoutBtn" class="btn btn-ghost btn-block">Keluar</button>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <header class="topbar">
+        <button id="menuBtn" class="icon-btn mobile-only" aria-label="Buka menu">☰</button>
+        <div>
+          <h2 id="pageTitle">Dashboard</h2>
+          <p id="pageSubtitle" class="muted">Ringkasan produksi dan pesanan.</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="quickOrderBtn" class="btn btn-primary">+ Pesanan</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <section id="page-dashboard" class="page">
+          <div class="stats-grid">
+            <div class="stat"><span>Total Pesanan</span><strong id="statTotal">0</strong></div>
+            <div class="stat"><span>Pending</span><strong id="statPending">0</strong></div>
+            <div class="stat"><span>Diproses</span><strong id="statProcess">0</strong></div>
+            <div class="stat"><span>Selesai</span><strong id="statDone">0</strong></div>
+            <div class="stat danger"><span>Terlambat</span><strong id="statLate">0</strong></div>
+            <div class="stat"><span>Total Produk</span><strong id="statProducts">0</strong></div>
+          </div>
+
+          <div class="section-grid">
+            <section class="panel">
+              <div class="panel-head"><div><h3>Pesanan Pending</h3><p class="muted">Pesanan yang belum selesai.</p></div><button class="btn btn-light" data-page-link="orders">Lihat semua</button></div>
+              <div id="dashboardPending" class="table-wrap"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head"><div><h3>Pesanan Terlambat</h3><p class="muted">Deadline lewat dan belum selesai.</p></div><button class="btn btn-light" data-page-link="late">Lihat semua</button></div>
+              <div id="dashboardLate" class="table-wrap"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="page-orders" class="page hidden">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <button id="addOrderBtn" class="btn btn-primary">+ Tambah Pesanan</button>
+              <input id="orderSearch" class="search" type="search" placeholder="Cari order, customer, produk...">
+            </div>
+            <div class="filters" id="orderFilters">
+              <button class="filter active" data-filter="all">Semua</button>
+              <button class="filter" data-filter="Pending">Pending</button>
+              <button class="filter" data-filter="Diproses">Diproses</button>
+              <button class="filter" data-filter="Selesai">Selesai</button>
+              <button class="filter" data-filter="late">Terlambat</button>
+            </div>
+          </div>
+          <section class="panel">
+            <div id="ordersTable" class="table-wrap"></div>
+          </section>
+        </section>
+
+        <section id="page-products" class="page hidden">
+          <div class="toolbar">
+            <div><button id="addProductBtn" class="btn btn-primary">+ Tambah Produk</button></div>
+            <input id="productSearch" class="search" type="search" placeholder="Cari produk...">
+          </div>
+          <section class="panel">
+            <div id="productsTable" class="table-wrap"></div>
+          </section>
+        </section>
+
+        <section id="page-late" class="page hidden">
+          <section class="panel">
+            <div class="panel-head">
+              <div><h3>Pesanan Terlambat</h3><p class="muted">Otomatis berdasarkan deadline dan status.</p></div>
+              <button id="refreshLateBtn" class="btn btn-light">Refresh</button>
+            </div>
+            <div id="lateTable" class="table-wrap"></div>
+          </section>
+        </section>
+      </main>
+    </div>
   </div>
 
-  <div id="productPanel" style="display:none">
-    <div class="summary">
-      <strong id="productTotalText">0 Produk</strong>
-      <button class="btn primary" onclick="openProductModal()">+ Tambah Produk</button>
-    </div>
-    <div class="table-wrap">
-      <div id="productList" class="product-list" style="padding:0 18px"></div>
-    </div>
-  </div>
-
-  <div id="orderFilters" class="filters">
-    <div class="statuses">
-      <span>Status Pesanan</span>
-      <button class="pill active" data-stage="Semua">Semua</button>
-      <button class="pill" data-stage="Maintenance Desain">Maintenance Desain</button>
-      <button class="pill" data-stage="Print Press">Print Press</button>
-      <button class="pill" data-stage="Jahit">Jahit</button>
-      <button class="pill" data-stage="Kirim Ekspedisi">Kirim Ekspedisi</button>
-    </div>
-    <div class="filter-row">
-      <input id="search" class="field search" placeholder="Masukkan no. pesanan / nama pembeli / produk" oninput="render()">
-      <select id="filterStage" class="field select" onchange="render()">
-        <option value="Semua">Semua Tahap</option>
-        <option>Maintenance Desain</option>
-        <option>Print Press</option>
-        <option>Jahit</option>
-        <option>Kirim Ekspedisi</option>
-        <option>Selesai</option>
-      </select>
-      <button class="btn" onclick="resetFilter()">Atur Ulang</button>
+  <!-- Product modal -->
+  <div id="productModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><h3 id="productModalTitle">Tambah Produk</h3><button class="icon-btn" data-close="productModal">×</button></div>
+      <form id="productForm">
+        <input id="productId" type="hidden">
+        <div class="form-grid">
+          <label>Nama Produk<input id="productName" maxlength="120" required></label>
+          <label>Link Desain Google Drive<input id="productDesignUrl" type="url" placeholder="https://drive.google.com/..."></label>
+          <label class="full">Keterangan<textarea id="productDescription" rows="3" maxlength="1000"></textarea></label>
+          <label class="full">Foto Produk
+            <input id="productImage" type="file" accept="image/*">
+            <small class="muted">JPG, PNG, WEBP. Disimpan di Supabase Storage.</small>
+          </label>
+          <div class="image-preview full"><img id="productPreview" alt="Preview foto produk"><span id="previewEmpty">Belum ada foto</span></div>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn btn-light" data-close="productModal">Batal</button>
+          <button type="submit" class="btn btn-primary" id="saveProductBtn">Simpan</button>
+        </div>
+      </form>
     </div>
   </div>
 
-  <div id="orderSummary" class="summary">
-    <strong id="totalText">0 Pesanan</strong>
-    <button class="btn primary" onclick="openModal()">+ Tambah Pesanan</button>
+  <!-- Order modal -->
+  <div id="orderModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card wide">
+      <div class="modal-head"><h3 id="orderModalTitle">Tambah Pesanan</h3><button class="icon-btn" data-close="orderModal">×</button></div>
+      <form id="orderForm">
+        <input id="orderId" type="hidden">
+        <div class="form-grid">
+          <label>Tanggal Order<input id="orderDate" type="date" required></label>
+          <label>Deadline<input id="orderDeadline" type="date" required></label>
+          <label>Nama Customer<input id="customerName" maxlength="120" required></label>
+          <label>Nomor WhatsApp<input id="customerWhatsapp" maxlength="30" placeholder="08xxxxxxxxxx"></label>
+          <label class="full">Produk
+            <select id="orderProduct" required><option value="">Memuat produk...</option></select>
+          </label>
+          <div id="selectedProductBox" class="selected-product full hidden">
+            <img id="selectedProductImage" alt="Foto produk">
+            <div><strong id="selectedProductName"></strong><div id="selectedProductDesign" class="muted"></div><button type="button" id="selectedProductOpen" class="btn btn-light btn-sm hidden">Buka Desain</button></div>
+          </div>
+          <label>Jumlah<input id="orderQuantity" type="number" min="1" step="1" required></label>
+          <label>Status<select id="orderStatus"><option>Pending</option><option>Diproses</option><option>Selesai</option><option>Dibatalkan</option></select></label>
+          <label>Link Desain Google Drive<input id="orderDesignUrl" type="url" placeholder="Opsional — otomatis mengikuti produk"></label>
+          <label>Link Resi Google Drive<input id="orderReceiptUrl" type="url" placeholder="Opsional"></label>
+          <label class="full">Catatan<textarea id="orderNotes" rows="3" maxlength="2000"></textarea></label>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn btn-light" data-close="orderModal">Batal</button>
+          <button type="submit" class="btn btn-primary" id="saveOrderBtn">Simpan</button>
+        </div>
+      </form>
+    </div>
   </div>
 
-  <div id="orderTable" class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:39%">Produk</th>
-          <th>No. Pesanan</th>
-          <th>Tgl Pesan</th>
-          <th>Deadline</th>
-          <th>Pembeli</th>
-          <th>Tanggal</th>
-          <th>Status / Tahap</th>
-          <th>Link Desain</th>
-          <th>Link Resi</th>
-          <th>Aksi</th>
-        </tr>
-      </thead>
-      <tbody id="orderBody"></tbody>
-    </table>
-  </div>
-</div>
-
-
-<div class="modal-bg" id="productModalBg">
- <div class="modal small">
-  <h2 id="productModalTitle">Tambah Produk</h2>
-  <form id="productForm">
-   <input type="hidden" id="editProductId">
-   <div class="form-grid">
-    <div class="form-group full">
-      <label>Nama Produk</label>
-      <input id="productName" class="form-control" required placeholder="Contoh: Setelan Anak Custom">
-    </div>
-    <div class="form-group full">
-      <label>Foto Produk</label>
-      <input id="productPhoto" class="form-control" type="file" accept="image/*">
-      <img id="productPreview" class="preview">
-      <span class="note">Foto produk akan otomatis muncul di setiap order yang memilih produk ini.</span>
-    </div>
-   </div>
-   <div class="modal-actions">
-    <button type="button" class="btn" onclick="closeProductModal()">Batal</button>
-    <button type="submit" class="btn primary">Simpan Produk</button>
-   </div>
-  </form>
- </div>
-</div>
-
-<div class="modal-bg" id="modalBg">
- <div class="modal">
-  <h2 id="modalTitle">Tambah Pesanan</h2>
-  <form id="orderForm">
-   <input type="hidden" id="editId">
-   <div class="form-grid">
-    <div class="form-group">
-      <label>No. Pesanan</label>
-      <input id="orderNo" class="form-control" required placeholder="Contoh: 2609046C85624X">
-    </div>
-    <div class="form-group">
-      <label>Nama Pembeli</label>
-      <input id="buyer" class="form-control" required placeholder="Nama pembeli">
-    </div>
-    <div class="form-group">
-      <label>Tanggal Pemesanan</label>
-      <input id="orderDate" class="form-control" type="date" required>
-    </div>
-    <div class="form-group">
-      <label>Tanggal Deadline</label>
-      <input id="deadline" class="form-control" type="date" required>
-    </div>
-    <div class="form-group">
-      <label>Tanggal Pemesanan</label>
-      <input id="orderDate" class="form-control" type="date" required>
-    </div>
-    <div class="form-group">
-      <label>Tanggal Deadline Pengiriman</label>
-      <input id="deadline" class="form-control" type="date" required>
-      <span class="note">Akan muncul notice merah jika deadline sudah lewat dan pesanan belum selesai.</span>
-    </div>
-    <div class="form-group full">
-      <label>Produk</label>
-      <select id="productId" class="form-control" required onchange="updateProductPreview()">
-        <option value="">Pilih produk</option>
-      </select>
-      <div id="selectedProductPreview" style="margin-top:8px"></div>
-    </div>
-    <div class="form-group">
-      <label>Variasi / Catatan</label>
-      <input id="variation" class="form-control" placeholder="Contoh: Yellow, M">
-    </div>
-    <div class="form-group">
-      <label>Tahap Produksi</label>
-      <select id="stage" class="form-control">
-        <option>Maintenance Desain</option>
-        <option>Print Press</option>
-        <option>Jahit</option>
-        <option>Kirim Ekspedisi</option>
-        <option>Selesai</option>
-      </select>
-    </div>
-    <div class="form-group full">
-      <label>Foto Produk</label>
-      <input id="photo" class="form-control" type="file" accept="image/*">
-      <img id="preview" class="preview">
-      <span class="note">Foto disimpan di browser ini. Gunakan gambar kecil agar penyimpanan tetap ringan.</span>
-    </div>
-    <div class="form-group full">
-      <label>Link Google Drive Desain</label>
-      <input id="designLink" class="form-control" type="url" placeholder="https://drive.google.com/...">
-    </div>
-    <div class="form-group full">
-      <label>Link Google Drive Resi</label>
-      <input id="receiptLink" class="form-control" type="url" placeholder="https://drive.google.com/...">
-    </div>
-    <div class="form-group full">
-      <label>Catatan</label>
-      <textarea id="notes" class="form-control" placeholder="Nama, nomor punggung, request custom, dll."></textarea>
-    </div>
-   </div>
-   <div class="modal-actions">
-    <button type="button" class="btn" onclick="closeModal()">Batal</button>
-    <button type="submit" class="btn primary">Simpan Pesanan</button>
-   </div>
-  </form>
- </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-const SUPABASE_URL="MASUKKAN_SUPABASE_URL";
-const SUPABASE_KEY="MASUKKAN_SUPABASE_PUBLISHABLE_KEY";
-const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-const KEY='pesanan_jersey_v1';
-const PRODUCT_KEY='produk_jersey_v1';
-let orders=[];
-let products=[];
-let activeTab='Semua';
-let activeStage='Semua';
-let pendingPhoto='';
-let pendingProductPhoto='';
-
-const $=id=>document.getElementById(id);
-async function loadData(){const [pr,or]=await Promise.all([db.from('products').select('*').order('created_at',{ascending:false}),db.from('orders').select('*, products(name)').order('deadline',{ascending:true})]);if(pr.error)throw pr.error;if(or.error)throw or.error;products=pr.data||[];orders=(or.data||[]).map(x=>({...x,product:x.products?.name||'',productId:x.product_id,orderNo:x.order_no,orderDate:x.order_date,deadline:x.deadline,designLink:x.design_link,receiptLink:x.receipt_link}));renderProducts();populateProductSelect();render();}
-async function save(){await loadData()}
-async function saveProducts(){await loadData()}
-
-function openModal(id=null){
-  if(!products.length){
-    alert('Buat produk terlebih dahulu di menu Produk.');
-    showTab('Produk');
-    openProductModal();
-    return;
-  }
-  $('modalBg').style.display='flex';
-  $('modalTitle').textContent=id?'Edit Pesanan':'Tambah Pesanan';
-  $('orderForm').reset(); $('editId').value=id||''; pendingPhoto='';
-  $('preview').style.display='none';
-  const now=new Date();
-  const today=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
-  const dd=new Date(now.getTime()+7*86400000);
-  const defaultDeadline=new Date(dd.getTime()-dd.getTimezoneOffset()*60000).toISOString().slice(0,10);
-  $('orderDate').value=today;
-  $('deadline').value=defaultDeadline;
-  populateProductSelect();
-  if(id){
-    const o=orders.find(x=>x.id===id); if(!o)return;
-    $('orderNo').value=o.orderNo; $('buyer').value=o.buyer; $('orderDate').value=o.orderDate||today; $('deadline').value=o.deadline||defaultDeadline;
-    $('productId').value=o.productId || products.find(p=>p.name===o.product)?.id || '';
-    $('variation').value=o.variation||''; $('stage').value=o.stage;
-    $('designLink').value=o.designLink||''; $('receiptLink').value=o.receiptLink||'';
-    $('notes').value=o.notes||'';
-    updateProductPreview();
-  }
-}
-function closeModal(){$('modalBg').style.display='none'}
-$('modalBg').addEventListener('click',e=>{if(e.target.id==='modalBg')closeModal()});
-
-function openProductModal(id=null){
-  $('productModalBg').style.display='flex';
-  $('productModalTitle').textContent=id?'Edit Produk':'Tambah Produk';
-  $('productForm').reset(); $('editProductId').value=id||''; pendingProductPhoto='';
-  $('productPreview').style.display='none';
-  if(id){
-    const p=products.find(x=>x.id===id); if(!p)return;
-    $('productName').value=p.name;
-    if(p.photo){$('productPreview').src=p.photo;$('productPreview').style.display='block';}
-  }
-}
-function closeProductModal(){$('productModalBg').style.display='none'}
-$('productModalBg').addEventListener('click',e=>{if(e.target.id==='productModalBg')closeProductModal()});
-
-$('productPhoto').addEventListener('change',e=>{
-  const file=e.target.files[0]; if(!file)return;
-  const reader=new FileReader();
-  reader.onload=()=>{pendingProductPhoto=reader.result;$('productPreview').src=pendingProductPhoto;$('productPreview').style.display='block'};
-  reader.readAsDataURL(file);
-});
-
-$('productForm').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const id=$('editProductId').value;
-  const old=id?products.find(x=>x.id===id):null;
-  const name=$('productName').value.trim();
-  if(products.some(p=>p.name.toLowerCase()===name.toLowerCase() && p.id!==id)){
-    alert('Nama produk sudah ada. Gunakan nama yang berbeda.');
-    return;
-  }
-  const data={name,photo:pendingProductPhoto||old?.photo||''};
-  const result=id?await db.from('products').update(data).eq('id',id):await db.from('products').insert(data);
-  if(result.error){alert('Gagal menyimpan produk: '+result.error.message);return;}
-  await saveProducts(); closeProductModal();
-});
-
-async function delProduct(id){
-  const used=orders.some(o=>o.productId===id);
-  const msg=used
-    ? 'Produk ini sudah dipakai pada order. Hapus produk? Foto pada order lama tetap tersimpan.'
-    : 'Hapus produk ini?';
-  if(confirm(msg)){
-    const result=await db.from('products').delete().eq('id',id); if(result.error){alert(result.error.message);return;} await saveProducts();
-  }
-}
-function editProduct(id){openProductModal(id)}
-
-function populateProductSelect(){
-  const select=$('productId');
-  if(!select)return;
-  const current=select.value;
-  select.innerHTML='<option value="">Pilih produk</option>'+products.map(p=>`<option value="${escAttr(p.id)}">${esc(p.name)}</option>`).join('');
-  if(products.some(p=>p.id===current))select.value=current;
-  updateProductPreview();
-}
-function updateProductPreview(){
-  const id=$('productId')?.value;
-  const p=products.find(x=>x.id===id);
-  $('selectedProductPreview').innerHTML=p
-    ? `<div style="display:flex;align-items:center;gap:10px"><img src="${p.photo||''}" style="width:58px;height:58px;object-fit:cover;border:1px solid #ddd;border-radius:6px;${p.photo?'':'display:none'}"><span class="muted">Foto produk: <strong>${esc(p.name)}</strong></span></div>`
-    : '';
-}
-
-$('photo').addEventListener('change',e=>{
-  const file=e.target.files[0]; if(!file)return;
-  const reader=new FileReader();
-  reader.onload=()=>{pendingPhoto=reader.result;$('preview').src=pendingPhoto;$('preview').style.display='block'};
-  reader.readAsDataURL(file);
-});
-
-$('orderForm').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const id=$('editId').value;
-  const old=id?orders.find(x=>x.id===id):null;
-  const productId=$('productId').value;
-  const p=products.find(x=>x.id===productId);
-  if(!p){alert('Pilih produk terlebih dahulu.');return;}
-  const data={order_no:$('orderNo').value.trim(),buyer:$('buyer').value.trim(),product_id:productId,variation:$('variation').value.trim(),stage:$('stage').value,order_date:$('orderDate').value,deadline:$('deadline').value,design_link:$('designLink').value.trim(),receipt_link:$('receiptLink').value.trim(),notes:$('notes').value.trim(),photo:pendingPhoto || old?.photo || p.photo || ''};
-  const result=id?await db.from('orders').update(data).eq('id',id):await db.from('orders').insert(data);
-  if(result.error){alert('Gagal menyimpan pesanan: '+result.error.message);return;}
-  await save();closeModal();
-});
-
-async function del(id){
- if(confirm('Hapus pesanan ini?')){const result=await db.from('orders').delete().eq('id',id); if(result.error){alert(result.error.message);return;} await save();}
-}
-function edit(id){openModal(id)}
-async function advance(id){
- const seq=['Maintenance Desain','Print Press','Jahit','Kirim Ekspedisi','Selesai'];
- const o=orders.find(x=>x.id===id), i=seq.indexOf(o.stage);
- if(i<seq.length-1){const result=await db.from('orders').update({stage:seq[i+1]}).eq('id',id);if(result.error){alert(result.error.message);return;}await save()}
-}
-function render(){
- const q=$('search').value.toLowerCase();
- const filter=$('filterStage').value;
- let list=orders.filter(o=>{
-  const matchQ=!q||[o.orderNo,o.buyer,o.product,o.variation,o.orderDate,o.deadline].join(' ').toLowerCase().includes(q);
-  const matchTab=activeTab==='Semua'||(activeTab==='Belum Diproses'&&o.stage==='Maintenance Desain')||(activeTab==='Diproses'&&['Print Press','Jahit','Kirim Ekspedisi'].includes(o.stage))||(activeTab==='Selesai'&&o.stage==='Selesai');
-  const matchStage=filter==='Semua'||o.stage===filter;
-  return matchQ&&matchTab&&matchStage&&(activeStage==='Semua'||o.stage===activeStage);
- });
- $('totalText').textContent=list.length+' Pesanan';
- $('allCount').textContent=orders.length?`(${orders.length})`:'';
- const n=orders.filter(o=>o.stage==='Maintenance Desain').length;
- const pr=orders.filter(o=>['Print Press','Jahit','Kirim Ekspedisi'].includes(o.stage)).length;
- const d=orders.filter(o=>o.stage==='Selesai').length;
- $('newCount').textContent=n?`(${n})`:'';
- $('processCount').textContent=pr?`(${pr})`:'';
- $('doneCount').textContent=d?`(${d})`:'';
-
- $('orderBody').innerHTML=list.length?list.map(o=>`
- <tr>
-  <td><div class="product">
-   ${o.photo?`<img src="${o.photo}" alt="">`:`<div style="width:68px;height:68px;border:1px solid #ddd;border-radius:5px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:11px">No Foto</div>`}
-   <div><div class="product-title">${esc(o.product)}</div><div class="muted">${esc(o.variation||'Tanpa variasi')}</div>${o.notes?`<div class="muted">${esc(o.notes)}</div>`:''}</div>
-  </div></td>
-  <td>${esc(o.orderNo)}</td>
-  <td>${formatDate(o.orderDate)}</td>
-  <td>${deadlineNotice(o)}</td>
-  <td>${esc(o.buyer)}</td>
-  <td>
-    <div>${formatDate(o.orderDate)}</div>
-    <div class="muted">Deadline: ${formatDate(o.deadline)}</div>
-    ${deadlineNotice(o)}
-  </td>
-  <td><span class="badge">${esc(o.stage)}</span>${o.stage!=='Selesai'?`<div class="stage"><button class="btn" style="padding:6px 10px;margin-top:5px" onclick="advance('${o.id}')">Lanjut Tahap →</button></div>`:''}</td>
-  <td>${o.designLink?`<a class="link" href="${safeUrl(o.designLink)}" target="_blank">Lihat Desain</a>`:'<span class="muted">Belum ada</span>'}</td>
-  <td>${o.receiptLink?`<a class="link" href="${safeUrl(o.receiptLink)}" target="_blank">Lihat Resi</a>`:'<span class="muted">Belum ada</span>'}</td>
-  <td class="actions"><button class="btn" onclick="edit('${o.id}')">Edit</button> <button class="btn danger" onclick="del('${o.id}')">Hapus</button></td>
- </tr>`).join(''):`<tr><td colspan="8" class="empty">Belum ada pesanan. Klik “+ Tambah Pesanan” untuk memasukkan order.</td></tr>`;
-}
-function renderProducts(){
- $('productTotalText').textContent=products.length+' Produk';
- $('productList').innerHTML=products.length?products.map(p=>`
-  <div class="product-row">
-   ${p.photo?`<img src="${p.photo}" alt="">`:`<div class="no-photo">No Foto</div>`}
-   <div class="product-info"><strong>${esc(p.name)}</strong><span class="muted">${orders.filter(o=>o.productId===p.id).length} order</span></div>
-   <button class="btn" onclick="editProduct('${p.id}')">Edit</button>
-   <button class="btn danger" onclick="delProduct('${p.id}')">Hapus</button>
-  </div>`).join(''):`<div class="empty">Belum ada produk. Tambahkan produk terlebih dahulu.</div>`;
-}
-function showTab(tab){
- activeTab=tab;
- document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
- const productsMode=tab==='Produk';
- $('productPanel').style.display=productsMode?'block':'none';
- $('orderFilters').style.display=productsMode?'none':'block';
- $('orderSummary').style.display=productsMode?'none':'flex';
- $('orderTable').style.display=productsMode?'none':'block';
- if(productsMode)renderProducts(); else render();
-}
-function todayISO(){
- const d=new Date(); const local=new Date(d.getTime()-d.getTimezoneOffset()*60000); return local.toISOString().slice(0,10);
-}
-function formatDate(v){
- if(!v)return '-';
- const d=new Date(v+'T00:00:00');
- return d.toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'});
-}
-function deadlineNotice(o){
- if(!o.deadline || o.stage==='Selesai') return '';
- const today=todayISO();
- if(o.deadline<today) return '<div class="deadline late">TERLAMBAT — deadline sudah lewat</div>';
- if(o.deadline===today) return '<div class="deadline late">NOTICE — deadline hari ini</div>';
- const diff=Math.ceil((new Date(o.deadline+'T00:00:00')-new Date(today+'T00:00:00'))/86400000);
- if(diff===1)return '<div class="deadline late">NOTICE — deadline besok</div>';
- if(diff<=3)return `<div class="deadline">Deadline ${diff} hari lagi</div>`;
- return '';
-}
-function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
-function escAttr(s){return esc(s)}
-function safeUrl(s){try{let u=new URL(s);return ['http:','https:'].includes(u.protocol)?esc(u.href):'#'}catch{return '#'}}
-function formatDate(v){if(!v)return '-';return new Date(v+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'})}
-function deadlineNotice(o){if(!o.deadline)return '<span class="muted">-</span>';if(o.stage==='Selesai')return formatDate(o.deadline);const t=new Date();t.setHours(0,0,0,0);const d=new Date(o.deadline+'T00:00:00');d.setHours(0,0,0,0);const n=Math.ceil((d-t)/86400000);if(n<0)return '<span class="badge" style="background:#ffe8e8;color:#d32f2f;font-weight:bold">TERLAMBAT '+Math.abs(n)+' HARI</span>';if(n===0)return '<span class="badge" style="background:#fff0d6;color:#c77700;font-weight:bold">DEADLINE HARI INI</span>';if(n===1)return '<span class="badge" style="background:#fff7d6;color:#a06a00;font-weight:bold">BESOK</span>';return formatDate(o.deadline)}
-function resetFilter(){
- $('search').value='';$('filterStage').value='Semua';activeStage='Semua';
- document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
- document.querySelector('.pill[data-stage="Semua"]').classList.add('active');render()
-}
-
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
-document.querySelectorAll('.pill').forEach(p=>p.onclick=()=>{
- document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
- p.classList.add('active');activeStage=p.dataset.stage;render();
-});
-
-function exportData(){
- const blob=new Blob([JSON.stringify({products,orders},null,2)],{type:'application/json'});
- const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pesanan-jersey-data.json';a.click();URL.revokeObjectURL(a.href);
-}
-loadData().catch(e=>{console.error(e);alert('Gagal terhubung ke Supabase. Isi URL dan Publishable Key terlebih dahulu.')});
-</script>
+  <script src="js/supabase.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/orders.js"></script>
 </body>
 </html>
