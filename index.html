@@ -1,12 +1,134 @@
 <!doctype html>
 <html lang="id">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Jersey Order — Manajemen Usaha</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jersey Order — Manajemen Usaha</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f6f8;color:#182033}
+button,input,select{font:inherit}button{cursor:pointer}.app{min-height:100vh;display:flex}.side{width:235px;background:#fff;border-right:1px solid #e4e6eb;position:fixed;inset:0 auto 0 0;padding:20px 14px;z-index:10}.brand{font-size:18px;font-weight:700;padding:5px 8px 24px}.brand small{display:block;color:#8a91a0;font-size:11px;margin-top:4px}.nav button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:9px;color:#626b7b;margin:4px 0}.nav button.active,.nav button:hover{background:#eef0f4;color:#182033;font-weight:700}.logout{position:absolute;bottom:20px;left:14px;right:14px;border:0;border-radius:9px;padding:10px;background:#eef0f4}.main{margin-left:235px;width:calc(100% - 235px);padding:28px}.top{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:22px}.top h1{margin:0;font-size:25px}.muted{color:#8a91a0;font-size:12px}.period{display:flex;gap:8px}.period select,.toolbar select,input,select{border:1px solid #d9dde5;border-radius:8px;padding:10px 11px;background:#fff;color:#182033}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}.card,.box{background:#fff;border:1px solid #e4e6eb;border-radius:12px;padding:17px}.card span{font-size:12px;color:#858d9c}.card b{display:block;font-size:19px;margin-top:7px}.box{margin-top:15px}.toolbar{display:flex;gap:8px;margin-bottom:13px}.search{flex:1}.search input{width:100%}.primary{background:#182033;color:#fff;border:0;border-radius:8px;padding:10px 14px}.secondary{background:#eef0f4;border:0;border-radius:8px;padding:10px 14px}.table{background:#fff;border:1px solid #e4e6eb;border-radius:12px;overflow:auto}table{width:100%;border-collapse:collapse;min-width:700px}th,td{padding:12px 14px;border-bottom:1px solid #eef0f3;text-align:left;font-size:13px}th{font-size:11px;color:#858d9c;text-transform:uppercase}tr:last-child td{border-bottom:0}.badge{display:inline-block;padding:5px 8px;border-radius:6px;font-size:11px}.warn{background:#fff1d3;color:#855b00}.good{background:#e5f5eb;color:#247048}.bad{background:#fde8e8;color:#ad3030}.actions button{border:0;background:#eef0f4;border-radius:6px;padding:6px;margin-right:4px}.modal{position:fixed;inset:0;background:#0005;display:grid;place-items:center;padding:15px;z-index:30}.modalbox{width:min(500px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:13px;padding:20px}.field{display:block;margin:11px 0}.field span{display:block;font-size:12px;font-weight:700;margin-bottom:5px}.field input,.field select{width:100%}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.modalfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:17px}.login{min-height:100vh;display:grid;place-items:center}.loginbox{width:min(390px,92%);background:#fff;border:1px solid #ddd;border-radius:14px;padding:27px}.loginbox input{width:100%;margin:6px 0}.loginbox button{width:100%;margin-top:8px}.note{padding:10px;border-radius:8px;background:#fff7df;color:#795900;font-size:12px}.mobile{display:none}
+@media(max-width:800px){.side{transform:translateX(-100%);transition:.2s}.side.open{transform:translateX(0);box-shadow:10px 0 30px #0002}.main{margin-left:0;width:100%;padding:16px}.mobile{display:inline-block}.top{align-items:flex-start;flex-wrap:wrap}.period{width:100%}.period select{flex:1}.cards{grid-template-columns:1fr 1fr}.toolbar{flex-wrap:wrap}.search{flex-basis:100%}.grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
+@media(max-width:450px){.cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function(){
+"use strict";
+
+var SUPABASE_URL="";
+var SUPABASE_KEY="";
+var db=null;
+var page="dashboard";
+var currentMonth=new Date().getMonth()+1;
+var currentYear=new Date().getFullYear();
+var orders=[],expenses=[],debts=[],balance=0;
+var months=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+var cats=["Iklan","Produksi","Operasional","Pengiriman","Lainnya"];
+
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function rp(n){return new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(Number(n)||0)}
+function today(){return new Date().toISOString().slice(0,10)}
+function late(o){return o.status==="belum_dikirim"&&o.deadline&&o.deadline<today()}
+function inPeriod(date){if(!date)return false;var d=new Date(date+"T00:00:00");return d.getMonth()+1===currentMonth&&d.getFullYear()===currentYear}
+function fmtDate(d){return d?new Date(d+"T00:00:00").toLocaleDateString("id-ID"):"-"}
+
+function showSetup(){
+ document.getElementById("root").innerHTML='<div class="login"><div class="loginbox"><h2>Jersey Order</h2><p class="muted">Website sudah berhasil dibuka.</p><div class="note">Langkah berikutnya: isi URL dan Anon/Publishable Key Supabase di bagian paling atas file <b>index.html</b>, lalu upload ulang ke GitHub.</div></div></div>';
+}
+
+function nav(id,label){return '<button class="'+(page===id?"active":"")+'" onclick="go(\''+id+'\')">'+label+'</button>'}
+window.go=function(id){page=id;render()};
+
+function header(){
+ var f=["dashboard","reports","balance"].indexOf(page)>=0;
+ return '<div class="top"><div><button class="mobile secondary" onclick="document.querySelector(\'.side\').classList.toggle(\'open\')">☰</button><h1>'+({dashboard:"Dashboard",orders:"Pesanan",expenses:"Pengeluaran",debts:"Utang",balance:"Saldo",reports:"Laporan"}[page])+'</h1></div>'+
+ (f?'<div class="period"><select onchange="currentMonth=+this.value;render()">'+months.map(function(m,i){return '<option value="'+(i+1)+'" '+(currentMonth===i+1?"selected":"")+'>'+m+'</option>'}).join("")+'</select><select onchange="currentYear=+this.value;render()">'+[2025,2026,2027,2028,2029,2030].map(function(y){return '<option '+(currentYear===y?"selected":"")+'>'+y+'</option>'}).join("")+'</select></div>':"")+'</div>';
+}
+
+function period(){
+ var os=orders.filter(function(x){return inPeriod(x.order_date)});
+ var es=expenses.filter(function(x){return inPeriod(x.date)});
+ var ds=debts.filter(function(x){return inPeriod(x.date)});
+ var sales=os.reduce(function(a,x){return a+Number(x.total||0)},0);
+ var exp=es.reduce(function(a,x){return a+Number(x.amount||0)},0);
+ var paid=ds.filter(function(x){return x.status==="sudah_dibayar"}).reduce(function(a,x){return a+Number(x.amount||0)},0);
+ return {os:os,es:es,ds:ds,sales:sales,exp:exp,paid:paid,profit:sales-exp};
+}
+
+function dashboard(){
+ var d=period(), pending=orders.filter(function(x){return x.status==="belum_dikirim"}).length;
+ var lateN=orders.filter(late).length;
+ var unpaid=debts.filter(function(x){return x.status==="belum_dibayar"}).reduce(function(a,x){return a+Number(x.amount||0)},0);
+ var end=Number(balance)+d.sales-d.exp-d.paid;
+ return '<div class="cards">'+
+ '<div class="card"><span>Total Penjualan</span><b>'+rp(d.sales)+'</b></div>'+
+ '<div class="card"><span>Total Pengeluaran</span><b>'+rp(d.exp)+'</b></div>'+
+ '<div class="card"><span>'+(d.profit>=0?"Laba":"Rugi")+'</span><b>'+rp(Math.abs(d.profit))+'</b></div>'+
+ '<div class="card"><span>Saldo</span><b>'+rp(end)+'</b></div>'+
+ '<div class="card"><span>Pesanan Belum Dikirim</span><b>'+pending+'</b></div>'+
+ '<div class="card"><span>Pesanan Terlambat</span><b>'+lateN+'</b></div>'+
+ '<div class="card"><span>Utang Belum Dibayar</span><b>'+rp(unpaid)+'</b></div></div>'+
+ '<div class="box"><h3>Pesanan Perlu Diperhatikan</h3>'+
+ orders.filter(function(x){return x.status==="belum_dikirim"||late(x)}).slice(0,8).map(function(x){return '<p><b>'+esc(x.name)+'</b> — '+x.quantity+' pcs — '+rp(x.total)+' '+(late(x)?'<span class="badge bad">⚠ Terlambat</span>':'<span class="badge warn">Belum dikirim</span>')+'</p>'}).join("")+
+ (orders.filter(function(x){return x.status==="belum_dikirim"||late(x)}).length?"":"<p class=\"muted\">Tidak ada pesanan.</p>")+'</div>';
+}
+
+function table(head,rows){return '<div class="table"><table><thead><tr>'+head.map(function(h){return "<th>"+h+"</th>"}).join("")+'</tr></thead><tbody>'+rows+(rows?"":'<tr><td colspan="'+head.length+'" style="text-align:center;padding:30px">Belum ada data.</td></tr>')+'</tbody></table></div>'}
+
+function ordersPage(){
+ return '<div class="toolbar"><div class="search"><input id="oq" placeholder="Cari nama pelanggan..." oninput="filterOrders()"></div><select id="os" onchange="filterOrders()"><option value="">Semua status</option><option value="belum_dikirim">Belum dikirim</option><option value="sudah_dikirim">Sudah dikirim</option><option value="selesai">Selesai</option></select><button class="primary" onclick="orderForm()">+ Tambah</button></div><div id="ot">'+orderRows(orders)+'</div>';
+}
+function orderRows(list){return table(["Nama","Qty","Total","Tanggal","Deadline","Status","Aksi"],list.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td>'+x.quantity+' pcs</td><td>'+rp(x.total)+'</td><td>'+fmtDate(x.order_date)+'</td><td>'+fmtDate(x.deadline)+'</td><td><span class="badge '+(late(x)?"bad":x.status==="selesai"?"good":"warn")+'">'+(late(x)?"⚠ Terlambat":x.status.replace("_"," "))+'</span></td><td class="actions"><button onclick="orderFormById(\''+x.id+'\')">Edit</button><button onclick="removeRow(\'orders\',\''+x.id+'\')">Hapus</button></td></tr>'}).join(""))}
+window.filterOrders=function(){var q=document.getElementById("oq").value.toLowerCase(),s=document.getElementById("os").value;document.getElementById("ot").innerHTML=orderRows(orders.filter(function(x){return x.name.toLowerCase().indexOf(q)>=0&&(!s||x.status===s)}))};
+
+function expensesPage(){return '<div class="toolbar"><div class="search"><input id="eq" placeholder="Cari keterangan..." oninput="filterExpenses()"></div><select id="ec" onchange="filterExpenses()"><option value="">Semua kategori</option>'+cats.map(function(c){return "<option>"+c+"</option>"}).join("")+'</select><button class="primary" onclick="expenseForm()">+ Tambah</button></div><div id="et">'+expenseRows(expenses)+'</div>'}
+function expenseRows(list){return table(["Tanggal","Keterangan","Kategori","Nominal","Aksi"],list.map(function(x){return '<tr><td>'+fmtDate(x.date)+'</td><td>'+esc(x.description)+'</td><td>'+x.category+'</td><td>'+rp(x.amount)+'</td><td class="actions"><button onclick="expenseFormById(\''+x.id+'\')">Edit</button><button onclick="removeRow(\'expenses\',\''+x.id+'\')">Hapus</button></td></tr>'}).join(""))}
+window.filterExpenses=function(){var q=document.getElementById("eq").value.toLowerCase(),c=document.getElementById("ec").value;document.getElementById("et").innerHTML=expenseRows(expenses.filter(function(x){return x.description.toLowerCase().indexOf(q)>=0&&(!c||x.category===c)}))};
+
+function debtsPage(){var unpaid=debts.filter(function(x){return x.status==="belum_dibayar"}).reduce(function(a,x){return a+Number(x.amount||0)},0);return '<div class="card" style="margin-bottom:13px"><span>Total Utang Belum Dibayar</span><b>'+rp(unpaid)+'</b></div><div class="toolbar"><div class="search"><input id="dq" placeholder="Cari nama/pihak..." oninput="filterDebts()"></div><select id="ds" onchange="filterDebts()"><option value="">Semua status</option><option value="belum_dibayar">Belum dibayar</option><option value="sudah_dibayar">Sudah dibayar</option></select><button class="primary" onclick="debtForm()">+ Tambah</button></div><div id="dt">'+debtRows(debts)+'</div>'}
+function debtRows(list){return table(["Pihak","Keterangan","Nominal","Tanggal","Jatuh Tempo","Status","Aksi"],list.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td>'+esc(x.description)+'</td><td>'+rp(x.amount)+'</td><td>'+fmtDate(x.date)+'</td><td>'+fmtDate(x.due_date)+'</td><td><span class="badge '+(x.status==="belum_dibayar"?"bad":"good")+'">'+(x.status==="belum_dibayar"?"Belum dibayar":"Sudah dibayar")+'</span></td><td class="actions">'+(x.status==="belum_dibayar"?'<button onclick="payDebt(\''+x.id+'\')">Bayar</button>':"")+'<button onclick="debtFormById(\''+x.id+'\')">Edit</button><button onclick="removeRow(\'debts\',\''+x.id+'\')">Hapus</button></td></tr>'}).join(""))}
+window.filterDebts=function(){var q=document.getElementById("dq").value.toLowerCase(),s=document.getElementById("ds").value;document.getElementById("dt").innerHTML=debtRows(debts.filter(function(x){return x.name.toLowerCase().indexOf(q)>=0&&(!s||x.status===s)}))};
+
+function balancePage(){var d=period(),end=Number(balance)+d.sales-d.exp-d.paid;return '<div class="box"><span class="muted">Saldo Akhir</span><h1>'+rp(end)+'</h1></div><div class="box"><h3>Saldo Awal</h3><div class="field"><span>Saldo awal</span><input id="bal" type="number" value="'+Number(balance)+'"></div><button class="primary" onclick="saveBalance()">Simpan</button><hr><p>+ Penjualan: '+rp(d.sales)+'</p><p>− Pengeluaran: '+rp(d.exp)+'</p><p>− Pembayaran utang: '+rp(d.paid)+'</p></div>'}
+function reportsPage(){var d=period();return '<div class="box" id="report"><button class="primary" style="float:right" onclick="window.print()">Cetak Laporan</button><h2>Laporan Laba Rugi</h2><p>'+months[currentMonth-1]+' '+currentYear+'</p><hr><h3>Pendapatan</h3><p>Total Penjualan: <b>'+rp(d.sales)+'</b></p><h3>Pengeluaran</h3>'+cats.map(function(c){var n=d.es.filter(function(x){return x.category===c}).reduce(function(a,x){return a+Number(x.amount||0)},0);return '<p>'+c+': '+rp(n)+'</p>'}).join("")+'<p><b>Total Pengeluaran: '+rp(d.exp)+'</b></p><div class="card"><b>'+(d.profit>=0?"Laba Bersih: ":"Rugi: ")+rp(Math.abs(d.profit))+'</b></div><p>Pengeluaran Iklan: <b>'+rp(d.es.filter(function(x){return x.category==="Iklan"}).reduce(function(a,x){return a+Number(x.amount||0)},0))+'</b></p></div>'}
+
+function modal(title,body){document.body.insertAdjacentHTML("beforeend",'<div class="modal" id="modal"><div class="modalbox"><h3>'+title+'</h3>'+body+'</div></div>')}
+function closeModal(){var m=document.getElementById("modal");if(m)m.remove()}
+function orderFormById(id){orderForm(orders.find(function(x){return String(x.id)===String(id)})||{})}
+function orderForm(x){x=x||{};modal(x.id?"Edit Pesanan":"Tambah Pesanan",'<div class="field"><span>Nama pelanggan</span><input id="f1" value="'+esc(x.name)+'"></div><div class="two"><div class="field"><span>Quantity</span><input id="f2" type="number" min="1" value="'+(x.quantity||1)+'"></div><div class="field"><span>Total (Rp)</span><input id="f3" type="number" min="0" value="'+(x.total||0)+'"></div></div><div class="two"><div class="field"><span>Tanggal</span><input id="f4" type="date" value="'+(x.order_date||today())+'"></div><div class="field"><span>Deadline</span><input id="f5" type="date" value="'+(x.deadline||today())+'"></div></div><div class="field"><span>Status</span><select id="f6"><option value="belum_dikirim">Belum dikirim</option><option value="sudah_dikirim">Sudah dikirim</option><option value="selesai">Selesai</option></select></div><div class="modalfoot"><button class="secondary" onclick="closeModal()">Batal</button><button class="primary" onclick="saveOrder(\''+(x.id||"")+'\')">Simpan</button></div>');if(x.id)document.getElementById("f6").value=x.status}
+function expenseFormById(id){expenseForm(expenses.find(function(x){return String(x.id)===String(id)})||{})}
+function expenseForm(x){x=x||{};modal(x.id?"Edit Pengeluaran":"Tambah Pengeluaran",'<div class="field"><span>Tanggal</span><input id="f1" type="date" value="'+(x.date||today())+'"></div><div class="field"><span>Keterangan</span><input id="f2" value="'+esc(x.description)+'"></div><div class="field"><span>Kategori</span><select id="f3">'+cats.map(function(c){return '<option '+(x.category===c?"selected":"")+'>'+c+'</option>'}).join("")+'</select></div><div class="field"><span>Nominal (Rp)</span><input id="f4" type="number" min="0" value="'+(x.amount||0)+'"></div><div class="modalfoot"><button class="secondary" onclick="closeModal()">Batal</button><button class="primary" onclick="saveExpense(\''+(x.id||"")+'\')">Simpan</button></div>')}
+function debtFormById(id){debtForm(debts.find(function(x){return String(x.id)===String(id)})||{})}
+function debtForm(x){x=x||{};modal(x.id?"Edit Utang":"Tambah Utang",'<div class="field"><span>Nama / pihak</span><input id="f1" value="'+esc(x.name)+'"></div><div class="field"><span>Keterangan</span><input id="f2" value="'+esc(x.description)+'"></div><div class="field"><span>Nominal (Rp)</span><input id="f3" type="number" min="0" value="'+(x.amount||0)+'"></div><div class="two"><div class="field"><span>Tanggal</span><input id="f4" type="date" value="'+(x.date||today())+'"></div><div class="field"><span>Jatuh tempo</span><input id="f5" type="date" value="'+(x.due_date||today())+'"></div></div><div class="field"><span>Status</span><select id="f6"><option value="belum_dibayar">Belum dibayar</option><option value="sudah_dibayar">Sudah dibayar</option></select></div><div class="modalfoot"><button class="secondary" onclick="closeModal()">Batal</button><button class="primary" onclick="saveDebt(\''+(x.id||"")+'\')">Simpan</button></div>');if(x.id)document.getElementById("f6").value=x.status}
+
+function localMode(){
+ return {
+  get:function(k){try{return JSON.parse(localStorage.getItem("jo_"+k)||"null")}catch(e){return null}},
+  set:function(k,v){localStorage.setItem("jo_"+k,JSON.stringify(v))}
+ };
+}
+var store=localMode();
+
+function loadLocal(){orders=store.get("orders")||[];expenses=store.get("expenses")||[];debts=store.get("debts")||[];balance=Number(store.get("balance")||0)}
+function saveLocal(){store.set("orders",orders);store.set("expenses",expenses);store.set("debts",debts);store.set("balance",balance)}
+
+window.saveOrder=function(id){var p={name:f1.value,quantity:Number(f2.value),total:Number(f3.value),order_date:f4.value,deadline:f5.value,status:f6.value};if(!p.name){alert("Nama pelanggan wajib diisi");return}if(id){var x=orders.find(function(a){return String(a.id)===String(id)});if(x)Object.assign(x,p)}else{p.id=Date.now();orders.unshift(p)}saveLocal();closeModal();render()};
+window.saveExpense=function(id){var p={date:f1.value,description:f2.value,category:f3.value,amount:Number(f4.value)};if(!p.description){alert("Keterangan wajib diisi");return}if(id){var x=expenses.find(function(a){return String(a.id)===String(id)});if(x)Object.assign(x,p)}else{p.id=Date.now();expenses.unshift(p)}saveLocal();closeModal();render()};
+window.saveDebt=function(id){var p={name:f1.value,description:f2.value,amount:Number(f3.value),date:f4.value,due_date:f5.value,status:f6.value};if(!p.name){alert("Nama/pihak wajib diisi");return}if(id){var x=debts.find(function(a){return String(a.id)===String(id)});if(x)Object.assign(x,p)}else{p.id=Date.now();debts.unshift(p)}saveLocal();closeModal();render()};
+window.removeRow=function(type,id){if(!confirm("Hapus data ini?"))return;var a=type==="orders"?orders:type==="expenses"?expenses:debts;a.splice(a.findIndex(function(x){return String(x.id)===String(id)}),1);saveLocal();render()};
+window.payDebt=function(id){var x=debts.find(function(a){return String(a.id)===String(id)});if(x)x.status="sudah_dibayar";saveLocal();render()};
+window.saveBalance=function(){balance=Number(document.getElementById("bal").value)||0;saveLocal();render()};
+
+function render(){
+ var content=page==="dashboard"?dashboard():page==="orders"?ordersPage():page==="expenses"?expensesPage():page==="debts"?debtsPage():page==="balance"?balancePage():reportsPage();
+ document.getElementById("root").innerHTML='<div class="app"><aside class="side"><div class="brand">Jersey Order<small>Manajemen Usaha</small></div><div class="nav">'+nav("dashboard","Dashboard")+nav("orders","Pesanan")+nav("expenses","Pengeluaran")+nav("debts","Utang")+nav("balance","Saldo")+nav("reports","Laporan")+'</div><button class="logout" onclick="if(confirm(\'Hapus semua data lokal?\')){localStorage.clear();loadLocal();render()}">Reset Data</button></aside><main class="main">'+header()+content+'</main></div>';
+}
+
+loadLocal();
+render();
+})();
+</script>
+</body>
 </html>
