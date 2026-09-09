@@ -72,82 +72,23 @@ const App = {
   },
 
   async loadAll() {
-  this.loading("dashboardPending");
-  this.loading("ordersTable");
-  this.loading("productsTable");
-
-  try {
-    // Ambil produk
-    const productsResult = await supabaseClient
-      .from("products")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (productsResult.error) {
-      throw new Error(
-        "Gagal memuat Produk: " + productsResult.error.message
-      );
-    }
-
-    // Ambil pesanan TANPA relasi products
-    const ordersResult = await supabaseClient
-      .from("orders")
-      .select("*")
-      .order("deadline", { ascending: true });
-
-    if (ordersResult.error) {
-      throw new Error(
-        "Gagal memuat Pesanan: " + ordersResult.error.message
-      );
-    }
-
-    const products = productsResult.data || [];
-    const orders = ordersResult.data || [];
-
-    // Hubungkan produk dengan pesanan berdasarkan product_id
-    const productMap = new Map(
-      products.map(product => [product.id, product])
-    );
-
-    orders.forEach(order => {
-      order.products = productMap.get(order.product_id) || null;
-    });
-
-    this.state.products = products;
-    this.state.orders = orders;
-
+    this.loading("dashboardPending");
+    this.loading("ordersTable");
+    this.loading("productsTable");
+    const [productsResult, ordersResult] = await Promise.all([
+      supabaseClient.from("products").select("*").order("created_at", { ascending: false }),
+      supabaseClient.from("orders").select("*, products(id,name,image_url,design_url)").order("deadline", { ascending: true })
+    ]);
+    if (productsResult.error) this.toast(productsResult.error.message, true);
+    if (ordersResult.error) this.toast(ordersResult.error.message, true);
+    this.state.products = productsResult.data || [];
+    this.state.orders = ordersResult.data || [];
     Orders.populateProducts();
-
     this.renderDashboard();
     Products.render();
     Orders.render();
     Orders.renderLate();
-
-  } catch (err) {
-
-    console.error("Jersey PO Error:", err);
-
-    this.state.orders = [];
-
-    this.renderDashboard();
-    Products.render();
-    Orders.render();
-    Orders.renderLate();
-
-    document.getElementById("dashboardPending").innerHTML = `
-      <div class="empty">
-        <strong>Gagal memuat pesanan.</strong>
-        <br>
-        ${this.escape(err.message || "Periksa koneksi Supabase.")}
-      </div>
-    `;
-
-    App.toast(
-      err.message || "Gagal memuat data.",
-      true
-    );
-  }
-},
+  },
 
   renderDashboard() {
     const orders = this.state.orders, products = this.state.products;

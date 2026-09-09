@@ -110,7 +110,7 @@ const Orders = {
     const q = (document.getElementById("orderSearch")?.value || "").toLowerCase().trim();
     let rows = [...App.state.orders];
     const filter = App.state.filter;
-    if (filter === "late") rows = rows.filter(this.isLate);
+    if (filter === "late") rows = rows.filter(o => this.isLate(o));
     else if (filter !== "all") rows = rows.filter(o => o.status === filter);
     rows = rows.filter(o => `${o.order_number} ${o.customer_name} ${o.products?.name || ""}`.toLowerCase().includes(q));
     rows.sort((a,b) => String(a.deadline).localeCompare(String(b.deadline)));
