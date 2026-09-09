@@ -109,7 +109,7 @@ const Orders = {
   render() {
     const q = (document.getElementById("orderSearch")?.value || "").toLowerCase().trim();
     let rows = [...App.state.orders];
-    const filter = App.state.filter;
+    const filter = App.state.filter;localeCompare
     if (filter === "late") rows = rows.filter(o => this.isLate(o));
     else if (filter !== "all") rows = rows.filter(o => o.status === filter);
     rows = rows.filter(o => `${o.order_number} ${o.customer_name} ${o.products?.name || ""}`.toLowerCase().includes(q));
@@ -140,7 +140,9 @@ const Orders = {
   },
 
   renderLate() {
-    const rows = App.state.orders.filter(this.isLate).sort((a,b) => String(a.deadline).localeCompare(String(b.deadline)));
+    const rows = App.state.orders
+  .filter(o => this.isLate(o))
+  .sort((a,b) => String(a.deadline).localeCompare(String(b.deadline)));
     const el = document.getElementById("lateTable");
     if (!rows.length) { el.innerHTML = '<div class="empty">Tidak ada pesanan terlambat.</div>'; return; }
     el.innerHTML = `<table class="table"><thead><tr><th>Order</th><th>Customer</th><th>Produk</th><th>Deadline</th><th>Status</th><th>Terlambat</th><th>Aksi</th></tr></thead><tbody>${rows.map(o => `<tr class="late-row"><td><strong>${App.escape(o.order_number)}</strong></td><td>${App.escape(o.customer_name)}</td><td>${App.escape(o.products?.name || "—")}</td><td>${this.date(o.deadline)}</td><td><span class="status late">TERLAMBAT</span></td><td class="late-days">${this.lateDays(o)} hari</td><td><button class="btn btn-light btn-sm" data-edit-order="${o.id}">Edit</button></td></tr>`).join("")}</tbody></table>`;
